@@ -24,12 +24,10 @@ server/yarn-debug.log*
 server/yarn-error.log*
 server/pnpm-debug.log*
 server/lerna-debug.log*
-server/
 server/node_modules
 server/dist
 server/dist-ssr
 server/*.local
-server/
 server/# Editor directories and files
 server/.vscode/*
 server/!.vscode/extensions.json
