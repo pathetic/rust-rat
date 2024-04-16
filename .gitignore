@@ -12,3 +12,34 @@ Cargo.lock
 
 # MSVC Windows builds of rustc generate these, which store debugging information
 *.pdb
+
+client/.vscode
+
+server/.vscode
+server/# Logs
+server/logs
+server/*.log
+server/npm-debug.log*
+server/yarn-debug.log*
+server/yarn-error.log*
+server/pnpm-debug.log*
+server/lerna-debug.log*
+server/
+server/node_modules
+server/dist
+server/dist-ssr
+server/*.local
+server/
+server/# Editor directories and files
+server/.vscode/*
+server/!.vscode/extensions.json
+server/.idea
+server/.DS_Store
+server/*.suo
+server/*.ntvs*
+server/*.njsproj
+server/*.sln
+server/*.sw?
+
+
+server/src-tauri

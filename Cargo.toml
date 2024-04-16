@@ -1,0 +1,11 @@
+[workspace]
+members = ["server/src-tauri", "client"]
+
+[profile.release]
+lto = true
+codegen-units = 1
+
+[profile.release.package.client]
+opt-level = 'z'
+debug = false
+debug-assertions = false
