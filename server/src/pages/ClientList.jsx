@@ -11,12 +11,14 @@ export const Clients = () => {
 
   const [contextMenu, setContextMenu] = useState(null);
 
-  const handleContextMenu = (event, id) => {
+  const handleContextMenu = (event, id, clientFullName) => {
+    console.log(clientFullName);
     event.preventDefault();
     setContextMenu({
       xPos: event.pageX,
       yPos: event.pageY,
       id: id,
+      clientFullName,
     });
   };
 
@@ -73,7 +75,13 @@ export const Clients = () => {
                 {clientList.map((client) => (
                   <tr
                     key={client.id}
-                    onContextMenu={(e) => handleContextMenu(e, client.id)}
+                    onContextMenu={(e) =>
+                      handleContextMenu(
+                        e,
+                        client.id,
+                        `${client.username}@${client.hostname}`
+                      )
+                    }
                   >
                     <th>
                       <p>{client.id}</p>
@@ -137,6 +145,7 @@ export const Clients = () => {
             y={contextMenu.yPos}
             id={contextMenu.id}
             onClose={handleClose}
+            clientFullName={contextMenu.clientFullName}
           />
         )}
       </div>

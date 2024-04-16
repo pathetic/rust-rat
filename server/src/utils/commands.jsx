@@ -7,7 +7,7 @@ export const getOutput = async (command, setCommand, shellStatus, id) => {
         <div>
           {" "}
           Available commands: <br />
-          <span className="text-teal-400 ml-3"> !clear</span> - Clear the
+          <span className="text-primary ml-3"> !clear</span> - Clear the
           terminal
         </div>
       );
@@ -24,7 +24,7 @@ export const getOutput = async (command, setCommand, shellStatus, id) => {
       } else
         return (
           <div>
-            <span className="text-red-500"> Shell is not started. </span>
+            <span className="text-error"> Shell is not started. </span>
           </div>
         );
   }

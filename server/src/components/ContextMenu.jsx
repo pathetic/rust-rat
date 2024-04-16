@@ -1,7 +1,15 @@
+import { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
+import { RATContext } from "../rat/RATContext";
 
-export const ContextMenu = ({ x, y, id, onClose }) => {
+export const ContextMenu = ({ x, y, id, onClose, clientFullName }) => {
+  const { setSelectedClient } = useContext(RATContext);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    setSelectedClient(clientFullName);
+    console.log(clientFullName);
+  }, [clientFullName]);
 
   return (
     <div

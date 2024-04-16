@@ -11,6 +11,8 @@ export const RATProvider = ({ children }) => {
   const [notificationClient, setNotificationClient] = useState(true);
   const [loaded, setLoaded] = useState(false);
 
+  const [selectedClient, setSelectedClient] = useState("");
+
   async function fetchClients() {
     setClientList(await invoke("fetch_clients"));
   }
@@ -60,6 +62,8 @@ export const RATProvider = ({ children }) => {
     setRunning,
     running,
     clientList,
+    setSelectedClient,
+    selectedClient,
   };
 
   return <RATContext.Provider value={RATdata}>{children}</RATContext.Provider>;

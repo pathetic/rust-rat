@@ -1,11 +1,13 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
+import { RATContext } from "../rat/RATContext";
 import { invoke } from "@tauri-apps/api/tauri";
 
 import logo512 from "../../src-tauri/icons/512x512.png";
 
 export const Header = () => {
   const [pathSegments, setPathSegments] = useState([]);
+  const { selectedClient } = useContext(RATContext);
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -63,7 +65,7 @@ export const Header = () => {
                       onClick={() => handleNavigate(`/clients/${segment.text}`)}
                       key={index}
                     >
-                      Client {segment.text}
+                      [{segment.text}] {selectedClient}
                     </a>
                   ) : (
                     <a

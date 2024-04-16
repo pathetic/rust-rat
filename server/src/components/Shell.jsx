@@ -4,7 +4,7 @@ import { keybindings } from "../utils/keybindings";
 export const Ascii = () => {
   return (
     <div>
-      <pre className="text-left text-teal-400 font-bold mb-2 drop-shadow-xl selection:bg-yellow-900 selection:text-white">
+      <pre className="text-left text-primary font-bold mb-2 drop-shadow-xl selection:bg-yellow-900 selection:text-white">
         {`
     
     __________                       __                _________.__           .__  .__   
@@ -24,7 +24,7 @@ export const Header = () => {
     <div className="font-mono text-left ml-10 mb-5  selection:bg-yellow-900">
       Welcome to Remote Shell!
       <br />
-      Type <span className="text-teal-400">!help</span> to get a list of
+      Type <span className="text-primary">!help</span> to get a list of
       available client-side commands. <br />
     </div>
   );
@@ -48,11 +48,11 @@ export const Command = ({ id, shellStatus }) => {
   useEffect(() => {
     const handleClick = (event) => {
       if (inputRef.current && !inputRef.current.contains(event.target)) {
-        inputRef.current.scrollIntoView({
-          behavior: "smooth",
-          block: "nearest",
-          inline: "start",
-        });
+        // inputRef.current.scrollIntoView({
+        //   behavior: "smooth",
+        //   block: "nearest",
+        //   inline: "start",
+        // });
         inputRef.current.focus();
       }
     };
@@ -69,7 +69,7 @@ export const Command = ({ id, shellStatus }) => {
       {command.map((item, index) => (
         <div key={index}>
           <div className="flex flex-row mb-0.5">
-            <div className="text-teal-500 font-bold ml-10  selection:bg-yellow-900">
+            <div className="text-accent font-bold ml-10  selection:bg-yellow-900">
               remote@shell~$
             </div>
             <div className="ml-2 font-mono selection:bg-yellow-900">
@@ -85,11 +85,11 @@ export const Command = ({ id, shellStatus }) => {
         </div>
       ))}
       <div className="flex flex-row">
-        <div className="text-teal-500 font-bold ml-10 selection:bg-yellow-900">
+        <div className="text-accent font-bold ml-10 selection:bg-yellow-900">
           remote@shell~$
         </div>
         <input
-          className="bg-transparent outline-none border-none font-mono ml-2 text-amber-500 w-2/3"
+          className="bg-transparent outline-none border-none font-mono ml-2  w-2/3"
           type="text"
           ref={inputRef}
           value={currentCommand}
