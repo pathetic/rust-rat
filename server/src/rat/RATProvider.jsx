@@ -31,7 +31,7 @@ export const RATProvider = ({ children }) => {
     console.log(toast_message);
     return toast(toast_message, {
       icon,
-      className: `${bg} text-white text-lg font-bold`,
+      className: `${bg} !text-primary-content text-lg`,
     });
   };
 
@@ -39,7 +39,7 @@ export const RATProvider = ({ children }) => {
     const _ = listen(type, (event) => {
       let icon = type == "client_connected" ? "🤙" : "👋";
       let message = type == "client_connected" ? "connected" : "disconnected";
-      let bg = type == "client_connected" ? "bg-primary" : "bg-neutral";
+      let bg = type == "client_connected" ? "!bg-primary" : "!bg-neutral";
       let toast_message = `Client ${event.payload} has ${message}!`;
 
       customToast(icon, toast_message, bg);

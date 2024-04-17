@@ -33,7 +33,7 @@ export const Header = () => {
   }
 
   function handleNavigate(page) {
-    if (page === "/Files" || page === "/Shell") {
+    if (page === "/Files" || page === "/Shell" || page == "/Process") {
       return;
     }
     navigate(page.toLowerCase());

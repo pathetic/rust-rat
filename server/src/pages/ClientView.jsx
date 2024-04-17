@@ -90,6 +90,12 @@ export const ClientView = () => {
                   >
                     Remote Shell
                   </a>
+                  <a
+                    onClick={() => navigate(`/clients/${id}/process`)}
+                    className="btn btn-active"
+                  >
+                    Process List
+                  </a>
                 </div>
               </div>
 
@@ -128,14 +134,14 @@ export const ClientView = () => {
             {screenshot ? (
               <img
                 src={`data:image/png;base64,${screenshot}`}
-                className="rounded-xl w-full aspect-video min-w-[90vh]"
+                className="rounded-xl w-[100vh] aspect-video"
               />
             ) : (
               <div className="skeleton rounded-xl w-full aspect-video min-w-[100vh]"></div>
             )}
           </figure>
           <div className="card-body items-center text-center">
-            <div className="card-actions">
+            <div className="">
               {[...Array(client.displays).keys()].map((index) => (
                 <a
                   key={index}
