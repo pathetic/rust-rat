@@ -1,22 +1,27 @@
-import { useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useNavigate } from "react-router-dom";
 import { RATContext } from "../rat/RATContext";
 import { ContextMenu } from "../components/ContextMenu";
 
+import { ContextMenuType } from "../../types";
+
 import windowsImg from "../assets/732225.png";
 import linuxImg from "../assets/pngimg.com - linux_PNG1.png";
 
-export const Clients = () => {
-  const { clientList, fetchClients } = useContext(RATContext);
+export const Clients: React.FC = () => {
+  const { clientList, fetchClients } = useContext(RATContext)!;
 
-  const [contextMenu, setContextMenu] = useState(null);
+  const [contextMenu, setContextMenu] = useState<ContextMenuType | null>(null);
 
-  const handleContextMenu = (event, id, clientFullName) => {
-    console.log(clientFullName);
+  const handleContextMenu = (
+    event: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    id: string,
+    clientFullName: string
+  ) => {
     event.preventDefault();
     setContextMenu({
-      xPos: event.pageX,
-      yPos: event.pageY,
+      x: event.pageX,
+      y: event.pageY,
       id: id,
       clientFullName,
     });
@@ -33,8 +38,9 @@ export const Clients = () => {
   }, []);
 
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (contextMenu && !event.target.closest(".context-menu")) {
+    const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as HTMLElement;
+      if (contextMenu && !target.closest(".context-menu")) {
         setContextMenu(null);
       }
     };
@@ -46,7 +52,7 @@ export const Clients = () => {
     };
   }, [contextMenu]);
 
-  const fetchGpus = (gpus) => {
+  const fetchGpus = (gpus: string[]) => {
     let gpuString = "";
 
     gpus.forEach((gpu) => {
@@ -141,8 +147,8 @@ export const Clients = () => {
         </table>
         {contextMenu && (
           <ContextMenu
-            x={contextMenu.xPos}
-            y={contextMenu.yPos}
+            x={contextMenu.x}
+            y={contextMenu.x}
             id={contextMenu.id}
             onClose={handleClose}
             clientFullName={contextMenu.clientFullName}

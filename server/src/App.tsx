@@ -9,9 +9,9 @@ import { RemoteShell } from "./pages/RemoteShell";
 import { ProcessList } from "./pages/ProcessList";
 import { Settings } from "./pages/Settings";
 import { RATProvider } from "./rat/RATProvider";
-import toast, { Toaster } from "react-hot-toast";
+import { Toaster } from "react-hot-toast";
 
-export const App = () => {
+export const App: React.FC = () => {
   return (
     <RATProvider>
       <Routes>

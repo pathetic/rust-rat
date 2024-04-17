@@ -1,8 +1,8 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 
-export const Navigation = () => {
-  const [pageActive, setPageActive] = useState("home");
+export const Navigation: React.FC = () => {
+  const [pageActive, setPageActive] = useState<string>("home");
 
   const navigate = useNavigate();
   const location = useLocation();
@@ -13,7 +13,7 @@ export const Navigation = () => {
     setPageActive(page);
   }, [location]);
 
-  function handleNavigation(page) {
+  function handleNavigation(page: string) {
     navigate(`/${page.toLowerCase()}`);
   }
 

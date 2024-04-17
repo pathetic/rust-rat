@@ -1,11 +1,11 @@
-import { useState, useContext } from "react";
+import { useContext } from "react";
 import { invoke } from "@tauri-apps/api/tauri";
 import { useNavigate } from "react-router-dom";
-import toast, { Toaster } from "react-hot-toast";
+import toast from "react-hot-toast";
 import { RATContext } from "./rat/RATContext";
 
-export const Server = () => {
-  const { port, setPort, setRunning } = useContext(RATContext);
+export const Server: React.FC = () => {
+  const { port, setPort, setRunning } = useContext(RATContext)!;
 
   const navigate = useNavigate();
 

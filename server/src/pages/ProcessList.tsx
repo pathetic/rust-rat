@@ -1,14 +1,15 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/tauri";
+import { ProcessType } from "../../types";
 
-export const ProcessList = () => {
+export const ProcessList: React.FC = () => {
   const { id } = useParams();
-  const [processes, setProcesses] = useState({});
+  const [processes, setProcesses] = useState<ProcessType[] | null>(null);
   const [processFilter, setProcessFilter] = useState("");
 
   async function fetchProcessList() {
-    let ok = await invoke("process_list", { id: id });
+    let ok: string = await invoke("process_list", { id: id });
 
     const entries = ok.replace("processes||", "").split(",");
 

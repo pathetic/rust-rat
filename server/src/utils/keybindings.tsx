@@ -1,16 +1,17 @@
 import { getOutput } from "./commands";
+import { ShellCommandType } from "../../types";
 
 export const keybindings = async (
-  e,
-  inputRef,
-  setCommand,
-  setUpArrowKeyPressed,
-  setCurrentCommand,
-  currentCommand,
-  command,
-  id,
-  shellStatus,
-  upArrowKeyPressed
+  e: React.KeyboardEvent<HTMLInputElement>,
+  inputRef: React.RefObject<HTMLInputElement>,
+  setCommand: React.Dispatch<React.SetStateAction<ShellCommandType[]>>,
+  setUpArrowKeyPressed: React.Dispatch<React.SetStateAction<number>>,
+  setCurrentCommand: React.Dispatch<React.SetStateAction<string>>,
+  currentCommand: string,
+  command: ShellCommandType[],
+  id: string,
+  shellStatus: string,
+  upArrowKeyPressed: number
 ) => {
   if (e.key === "Enter") {
     const output = await getOutput(currentCommand, setCommand, shellStatus, id);

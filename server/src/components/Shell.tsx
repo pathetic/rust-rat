@@ -1,7 +1,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import { keybindings } from "../utils/keybindings";
+import { ShellCommandType, CommandProps } from "../../types";
 
-export const Ascii = () => {
+export const Ascii: React.FC = () => {
   return (
     <div>
       <pre className="text-left text-primary font-bold mb-2 drop-shadow-xl selection:bg-yellow-900 selection:text-white">
@@ -19,7 +20,7 @@ export const Ascii = () => {
   );
 };
 
-export const Header = () => {
+export const Header: React.FC = () => {
   return (
     <div className="font-mono text-left ml-10 mb-5  selection:bg-yellow-900">
       Welcome to Remote Shell!
@@ -30,29 +31,29 @@ export const Header = () => {
   );
 };
 
-export const Command = ({ id, shellStatus }) => {
-  const [command, setCommand] = useState([]);
-  const [currentCommand, setCurrentCommand] = useState("");
-  const [upArrowKeyPressed, setUpArrowKeyPressed] = useState(0);
-  const inputRef = useRef(null);
+export const Command: React.FC<CommandProps> = ({ id, shellStatus }) => {
+  const [command, setCommand] = useState<ShellCommandType[]>([]);
+  const [currentCommand, setCurrentCommand] = useState<string>("");
+  const [upArrowKeyPressed, setUpArrowKeyPressed] = useState<number>(0);
+  const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
-    inputRef.current.scrollIntoView({
-      behavior: "smooth",
-      block: "nearest",
-      inline: "start",
-    });
-    inputRef.current.focus();
+    if (inputRef.current) {
+      inputRef.current.scrollIntoView({
+        behavior: "smooth",
+        block: "nearest",
+        inline: "start",
+      });
+      inputRef.current.focus();
+    }
   }, [command]);
 
   useEffect(() => {
-    const handleClick = (event) => {
-      if (inputRef.current && !inputRef.current.contains(event.target)) {
-        // inputRef.current.scrollIntoView({
-        //   behavior: "smooth",
-        //   block: "nearest",
-        //   inline: "start",
-        // });
+    const handleClick = (event: MouseEvent) => {
+      if (
+        inputRef.current &&
+        !inputRef.current.contains(event.target as Node)
+      ) {
         inputRef.current.focus();
       }
     };
@@ -94,8 +95,10 @@ export const Command = ({ id, shellStatus }) => {
           ref={inputRef}
           value={currentCommand}
           autoFocus={true}
-          onChange={(e) => setCurrentCommand(e.target.value)}
-          onKeyDown={(e) => {
+          onChange={(e: React.ChangeEvent<HTMLInputElement>) =>
+            setCurrentCommand(e.target.value)
+          }
+          onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
             keybindings(
               e,
               inputRef,

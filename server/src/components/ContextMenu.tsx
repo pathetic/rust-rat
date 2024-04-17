@@ -1,9 +1,16 @@
-import { useContext, useEffect } from "react";
+import React, { useContext, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { RATContext } from "../rat/RATContext";
+import { ContextMenuProps } from "../../types";
 
-export const ContextMenu = ({ x, y, id, onClose, clientFullName }) => {
-  const { setSelectedClient } = useContext(RATContext);
+export const ContextMenu: React.FC<ContextMenuProps> = ({
+  x,
+  y,
+  id,
+  onClose,
+  clientFullName,
+}) => {
+  const { setSelectedClient } = useContext(RATContext)!;
   const navigate = useNavigate();
 
   useEffect(() => {

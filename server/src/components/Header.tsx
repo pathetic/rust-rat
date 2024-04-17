@@ -1,13 +1,17 @@
-import { useState, useEffect, useContext } from "react";
+import React, { useState, useEffect, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { RATContext } from "../rat/RATContext";
-import { invoke } from "@tauri-apps/api/tauri";
+// import logo512 from "../../src-tauri/icons/512x512.png";
+import logo512 from "../assets/732225.png";
 
-import logo512 from "../../src-tauri/icons/512x512.png";
+export interface Segment {
+  text: string;
+  isNumber: boolean;
+}
 
-export const Header = () => {
-  const [pathSegments, setPathSegments] = useState([]);
-  const { selectedClient } = useContext(RATContext);
+export const Header: React.FC = () => {
+  const [pathSegments, setPathSegments] = useState<Segment[]>([]);
+  const { selectedClient } = useContext(RATContext)!;
 
   const location = useLocation();
   const navigate = useNavigate();
@@ -23,16 +27,16 @@ export const Header = () => {
   }, [location]);
 
   // Function to capitalize the first letter of a string
-  function capitalizeFirstLetter(string) {
+  function capitalizeFirstLetter(string: string) {
     return string.charAt(0).toUpperCase() + string.slice(1);
   }
 
   // Function to check if a string is numeric
-  function isNumeric(value) {
-    return !isNaN(value) && !isNaN(parseFloat(value));
+  function isNumeric(value: string) {
+    return !isNaN(parseFloat(value.toString())) && !isNaN(parseFloat(value));
   }
 
-  function handleNavigate(page) {
+  function handleNavigate(page: string) {
     if (page === "/Files" || page === "/Shell" || page == "/Process") {
       return;
     }
@@ -53,7 +57,7 @@ export const Header = () => {
         <h1 className="text-lg font-bold pl-4">RAT Server</h1>
       </div>
       <div className="navbar-center">
-        <div className="input border border-base-300 bg-base-200 border-white">
+        <div className="input border bg-base-200 border-white">
           <div className="text-sm breadcrumbs">
             <ul className="text-lg hover:cursor-default">
               <li>Server</li>

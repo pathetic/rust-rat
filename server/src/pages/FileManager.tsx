@@ -8,15 +8,15 @@ let fileIcon = {
   back: <i className="ri-arrow-left-line"></i>,
 };
 
-export const FileManager = () => {
+export const FileManager: React.FC = () => {
   const { id } = useParams();
 
   const [path, setPath] = useState("");
-  const [files, setFiles] = useState({});
+  const [files, setFiles] = useState<Array<string> | null>(null);
 
-  const filesRef = useRef();
+  const filesRef = useRef<HTMLDivElement>(null);
 
-  function fileActions(type, fileName) {
+  function fileActions(type: string, fileName: string) {
     if (type == "file")
       return (
         <div className="flex flex-row gap-4 mb-4">
@@ -50,8 +50,8 @@ export const FileManager = () => {
     fetchFolder("disks");
   }, []);
 
-  async function fetchFolder(folder) {
-    let ok = await invoke("read_files", {
+  async function fetchFolder(folder: string) {
+    let ok: Array<string> = await invoke("read_files", {
       id: id,
       run: `${
         folder == "previous"
@@ -63,12 +63,13 @@ export const FileManager = () => {
     });
 
     setPath(ok[0]);
-    setFiles(ok[1]);
+    setFiles(ok[1] as unknown as Array<string>);
 
-    filesRef.current.scrollIntoView({ behavior: "smooth" });
+    if (filesRef.current)
+      filesRef.current.scrollIntoView({ behavior: "smooth" });
   }
 
-  async function manageFile(command, fileName) {
+  async function manageFile(command: string, fileName: string) {
     console.log(command, fileName);
 
     let ok = await invoke("manage_file", {
@@ -77,7 +78,7 @@ export const FileManager = () => {
     });
   }
 
-  function fileExtension(fileName) {
+  function fileExtension(fileName: string) {
     if (
       fileName.includes(".rar") ||
       fileName.includes(".zip") ||

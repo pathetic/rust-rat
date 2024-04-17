@@ -1,8 +1,8 @@
 import { useContext } from "react";
 import { RATContext } from "../rat/RATContext";
 
-export const Home = () => {
-  const { running, clientList } = useContext(RATContext);
+export const Home: React.FC = () => {
+  const { running, clientList } = useContext(RATContext)!;
 
   return (
     <div className="p-8 flex flex-1 flex-col overflow-auto w-full">

