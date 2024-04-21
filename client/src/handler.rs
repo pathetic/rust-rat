@@ -40,59 +40,31 @@ pub fn handle_command(write_stream: &mut TcpStream, command: &str, remote_shell:
     }
 }
 
-pub fn read_buffer_tcp(stream: &mut TcpStream) -> Result<Vec<u8>, ()> {
-    let mut buffer = [0_u8; 1024 * 1024];
-    let mut vect: Vec<u8> = Vec::new();
-    match stream.read(&mut buffer) {
-        Ok(size) => {
-            let buf_str = String::from_utf8_lossy(&buffer[0..size]);
+pub fn read_buffer_tcp(stream: &mut TcpStream) -> std::io::Result<Vec<u8>> {
+    // Read the size of the incoming message as a 4-byte array
+    let mut size_bytes = [0_u8; 4];
+    stream.read_exact(&mut size_bytes)?;
 
-            if size == 0 {
-                return Err(());
-            }
+    // Convert the byte array to usize
+    let size = u32::from_be_bytes(size_bytes) as usize;
 
-            for v in &buffer[0..size] {
-                vect.push(*v);
-            }
+    // Allocate buffer of the exact size needed
+    let mut buffer = vec![0_u8; size];
+    stream.read_exact(&mut buffer)?;
 
-            if !buf_str.ends_with("\n----------ENDOFCONTENT----------\n") {
-                loop {
-                    if let Ok(_size) = stream.read(&mut buffer) {
-                        if _size == 0 {
-                            return Err(());
-                        }
-
-                        for v in &buffer[0.._size] {
-                            vect.push(*v);
-                        }
-
-                        if String::from_utf8_lossy(vect.as_slice())
-                            .ends_with("\n----------ENDOFCONTENT----------\n")
-                        {
-                            vect = vect[0..(vect.len() - 34)].to_vec();
-                            break;
-                        }
-                    } else {
-                        return Err(());
-                    }
-                }
-            } else {
-                vect = vect[0..vect.len() - 34].to_vec();
-            }
-            Ok(vect)
-        }
-        Err(_) => Err(()),
-    }
-}
-
-pub fn write_content(stream: &mut TcpStream, bytes: &[u8]) {
-    let _ = stream.write(bytes);
+    Ok(buffer)
 }
 
 pub fn write_bytes(stream: &mut TcpStream, bytes: &[u8]) {
-    let mut vec = bytes.to_vec();
-    "\n----------ENDOFCONTENT----------\n".as_bytes().iter().for_each(|b| vec.push(*b));
-    let _ = stream.write(vec.as_slice());
+    // Convert the message to bytes and calculate its length
+    let size = bytes.len() as u32;
+    let size_bytes = size.to_be_bytes();
+
+    // Send the size of the message first
+    let _ = stream.write_all(&size_bytes);
+
+    // Send the actual message data
+    let _ = stream.write_all(bytes);
 }
 
 pub fn read_buffer<I>(stream: &mut I) -> Result<Vec<u8>, ()>

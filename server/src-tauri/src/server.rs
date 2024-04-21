@@ -6,17 +6,18 @@ use tauri::{AppHandle, Manager};
 use crate::client;
 
 fn get_client(mut stream: TcpStream) -> Vec<String> {
-    stream
-        .write_all(b"init_client\n----------ENDOFCONTENT----------\n")
-        .unwrap();
+    let init_msg = "init_client";
+    let size = init_msg.len() as u32;
+    let size_bytes = size.to_be_bytes();
+
+    stream.write_all(&size_bytes).unwrap();
+    stream.write_all(init_msg.as_bytes()).unwrap();
 
     let received = read_buffer(stream.try_clone().unwrap()).unwrap();
-    let value = String::from_utf8_lossy(received.as_slice()).to_string();
+    let value = String::from_utf8_lossy(&received).to_string();
 
     value
         .split("::")
-        .collect::<Vec<&str>>()
-        .iter()
         .map(|x| x.to_string())
         .collect()
 }
@@ -135,34 +136,14 @@ impl Server {
     }
 }
 
-fn read_buffer(mut stream: TcpStream) -> Result<Vec<u8>, ()> {
-    let mut buffer = [0_u8; 1024];
-    match stream.read(&mut buffer) {
-        Ok(size) => {
-            if size == 0 {
-                return Err(());
-            }
+fn read_buffer(mut stream: TcpStream) -> std::io::Result<Vec<u8>> {
+    let mut size_bytes = [0_u8; 4];
+    stream.read_exact(&mut size_bytes)?;
 
-            let mut vect: Vec<u8> = Vec::new();
-            for v in &buffer {
-                if *v > 0_u8 {
-                    vect.push(*v);
-                }
-            }
+    let size = u32::from_be_bytes(size_bytes) as usize;
 
-            if size > 1024 {
-                let repeat = size / 1024;
-                for _i in 0..repeat {
-                    stream.read_exact(&mut buffer).unwrap();
-                    for v in &buffer {
-                        if *v > 0_u8 {
-                            vect.push(*v);
-                        }
-                    }
-                }
-            }
-            Ok(vect)
-        }
-        Err(_) => Err(()),
-    }
+    let mut buffer = vec![0_u8; size];
+    stream.read_exact(&mut buffer)?;
+
+    Ok(buffer)
 }

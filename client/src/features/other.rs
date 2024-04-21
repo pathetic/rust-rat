@@ -100,11 +100,7 @@ pub fn client_info(write_stream: &mut TcpStream) {
     let is_elevated = is_elevated();
 
     let response = format!("receive::{}::{}::{}::{}::{}::{}::{}::{}::{}", username, hostname, os, ram, cpu, gpus.join(","), storage.join(","), display_count, is_elevated);
-    write_content(write_stream, response.as_bytes());
-}
-
-fn write_content(stream: &mut TcpStream, bytes: &[u8]) {
-    let _ = stream.write(bytes);
+    write_bytes(write_stream, response.as_bytes());
 }
 
 const SUFFIX: [& str; 9] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
