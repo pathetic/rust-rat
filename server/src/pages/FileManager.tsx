@@ -70,9 +70,7 @@ export const FileManager: React.FC = () => {
   }
 
   async function manageFile(command: string, fileName: string) {
-    console.log(command, fileName);
-
-    let ok = await invoke("manage_file", {
+    await invoke("manage_file", {
       id: id,
       run: `${command}||${fileName}`,
     });

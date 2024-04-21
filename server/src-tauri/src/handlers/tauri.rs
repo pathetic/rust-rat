@@ -23,7 +23,7 @@ pub struct FrontClient {
     pub is_elevated: bool,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize)]
 pub struct TauriState {
     pub port: String,
     pub running: bool
@@ -58,6 +58,14 @@ pub fn start_server(
     tauri_state.running = true;
 
     "true".to_string()
+}
+
+#[tauri::command]
+pub fn fetch_state(
+    tauri_state: State<'_, SharedTauriState>,
+) -> TauriState {
+    let tauri_state = tauri_state.0.lock().unwrap();
+    tauri_state.clone()
 }
 
 #[tauri::command]

@@ -1,8 +1,7 @@
 import React, { useState, useEffect, useContext } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { RATContext } from "../rat/RATContext";
-// import logo512 from "../../src-tauri/icons/512x512.png";
-import logo512 from "../assets/732225.png";
+import logo512 from "../../src-tauri/icons/512x512.png";
 
 export interface Segment {
   text: string;

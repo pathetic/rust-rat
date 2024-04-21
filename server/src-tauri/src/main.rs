@@ -6,7 +6,7 @@ mod client;
 mod server;
 mod handlers;
 
-use handlers::tauri::{SharedTauriState, SharedServer, TauriState, execute_shell_command, fetch_client, fetch_clients, handle_system_command, manage_file, manage_shell, read_files, start_server, take_screenshot, process_list, kill_process};
+use handlers::tauri::{SharedTauriState, SharedServer, TauriState, execute_shell_command, fetch_client, fetch_state, fetch_clients, handle_system_command, manage_file, manage_shell, read_files, start_server, take_screenshot, process_list, kill_process};
 
 #[tokio::main(worker_threads = 3)]
 async fn main() {
@@ -24,6 +24,7 @@ async fn main() {
         })
         .invoke_handler(tauri::generate_handler![
             start_server,
+            fetch_state,
             fetch_clients,
             fetch_client,
             read_files,

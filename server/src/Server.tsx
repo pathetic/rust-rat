@@ -14,7 +14,7 @@ export const Server: React.FC = () => {
 
     if (serverMessage === "true") {
       toast.success("Server started successfully!", {
-        className: `!bg-secondary !text-primary-content text-lg`,
+        className: `!bg-secondary !text-secondary-content text-lg`,
       });
 
       setRunning(true);
@@ -34,12 +34,12 @@ export const Server: React.FC = () => {
           error: "Could not redirect.",
         },
         {
-          className: `!bg-secondary !text-primary-content text-lg`,
+          className: `!bg-secondary !text-secondary-content text-lg`,
         }
       );
     } else {
       toast.error("Server failed to start!", {
-        className: `!bg-secondary !text-primary-content text-lg`,
+        className: `!bg-secondary !text-secondary-content text-lg`,
       });
     }
   }

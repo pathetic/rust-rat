@@ -1,4 +1,4 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/tauri";
 import { listen } from "@tauri-apps/api/event";
@@ -19,20 +19,20 @@ export const ClientView: React.FC = () => {
   }
 
   async function waitScreenshot() {
-    const unlisten = listen("client_screenshot", (event) => {
+    listen("client_screenshot", (event) => {
       setScreenshot(event.payload as string);
     });
   }
 
   async function takeScreenshot(display: number) {
-    let ok = await invoke("take_screenshot", {
+    await invoke("take_screenshot", {
       id,
       display: display,
     });
   }
 
   async function handleSystem(cmd: string) {
-    let ok = await invoke("handle_system_command", { id, run: cmd });
+    await invoke("handle_system_command", { id, run: cmd });
   }
 
   useEffect(() => {
@@ -65,7 +65,7 @@ export const ClientView: React.FC = () => {
         {loaded && client != null ? (
           <div className="card bg-base-100 !min-w-[350px] shadow-xl border border-white">
             <div className="card-body" style={{ whiteSpace: "pre-line" }}>
-              <h2 className="card-title">User Information</h2>
+              <h2 className="card-title">System Information</h2>
               <a>OS: {client.os}</a>
               <a>Username: {client.username}</a>
               <a>Hostname: {client.hostname}</a>
@@ -130,7 +130,7 @@ export const ClientView: React.FC = () => {
         )}
 
         <div className="card bg-base-100 shadow-xl border border-white">
-          <h2 className="card-title pl-12 pt-8">User Desktop</h2>
+          <h2 className="card-title pl-12 pt-8">System Desktop</h2>
           <figure className="px-10 pt-10">
             {screenshot ? (
               <img

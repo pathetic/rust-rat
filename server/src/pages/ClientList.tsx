@@ -1,5 +1,4 @@
 import React, { useEffect, useState, useContext } from "react";
-import { useNavigate } from "react-router-dom";
 import { RATContext } from "../rat/RATContext";
 import { ContextMenu } from "../components/ContextMenu";
 
@@ -30,8 +29,6 @@ export const Clients: React.FC = () => {
   const handleClose = () => {
     setContextMenu(null);
   };
-
-  const navigate = useNavigate();
 
   useEffect(() => {
     fetchClients();
@@ -148,7 +145,7 @@ export const Clients: React.FC = () => {
         {contextMenu && (
           <ContextMenu
             x={contextMenu.x}
-            y={contextMenu.x}
+            y={contextMenu.y}
             id={contextMenu.id}
             onClose={handleClose}
             clientFullName={contextMenu.clientFullName}

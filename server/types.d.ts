@@ -1,5 +1,10 @@
 import React from "react";
 
+export type RATState = {
+  running: boolean;
+  port: string;
+};
+
 export type RATContextType = {
   port: string;
   setPort: (port: string) => void;
@@ -9,6 +14,8 @@ export type RATContextType = {
   clientList: Array<RATClient>;
   setSelectedClient: (client: string) => void;
   selectedClient: string;
+  setNotificationClient: (notificationClient: boolean) => void;
+  notificationClient: boolean;
 };
 
 export interface RATProviderProps {
@@ -43,6 +50,23 @@ export interface ContextMenuProps {
   id: string;
   onClose: () => void;
   clientFullName: string;
+}
+
+export type MenuOptionType = {
+  label: string;
+  icon: React.ReactNode;
+  navigate?: boolean;
+  path?: string;
+  options?: MenuOptionType[];
+};
+
+interface SubMenuProps {
+  items: MenuOptionType[];
+  top: number;
+  left: number;
+  id: string;
+  navigate: (string) => void;
+  onClose: () => void;
 }
 
 export interface ShellCommandType {
