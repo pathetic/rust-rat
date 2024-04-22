@@ -1,7 +1,7 @@
 use std::net::TcpStream;
 use std::path::{PathBuf, Path};
 
-use crate::handler::write_bytes;
+use common::buffers::write_bytes;
 
 pub fn file_manager(write_stream: &mut TcpStream, current_path: &mut PathBuf, command: &str) {
     match command {

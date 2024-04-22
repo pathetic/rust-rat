@@ -32,7 +32,7 @@ export const ProcessList: React.FC = () => {
     <div className="p-8 flex flex-1 flex-col overflow-auto w-full">
       <div className="flex flex-row gap-4 pb-4 w-[30%]">
         <a className="btn btn-active" onClick={fetchProcessList}>
-          <i className="ri-refresh-line"></i>
+          <i className="ri-refresh-fill ri-2x"></i>
           Refresh
         </a>
         <div>

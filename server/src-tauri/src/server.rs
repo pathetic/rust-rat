@@ -1,9 +1,10 @@
-use std::io::{Read, Write};
+use std::io::Write;
 use std::net::{TcpListener, TcpStream};
 use std::sync::{Arc, Mutex};
 use tauri::{AppHandle, Manager};
 
 use crate::client;
+use common::buffers::read_buffer;
 
 fn get_client(mut stream: TcpStream) -> Vec<String> {
     let init_msg = "init_client";
@@ -13,7 +14,7 @@ fn get_client(mut stream: TcpStream) -> Vec<String> {
     stream.write_all(&size_bytes).unwrap();
     stream.write_all(init_msg.as_bytes()).unwrap();
 
-    let received = read_buffer(stream.try_clone().unwrap()).unwrap();
+    let received = read_buffer(&mut stream.try_clone().unwrap()).unwrap();
     let value = String::from_utf8_lossy(&received).to_string();
 
     value
@@ -27,8 +28,6 @@ pub struct Server {
     pub tauri_handle: Arc<Mutex<AppHandle>>,
     pub clients: Arc<Mutex<Vec<client::Client>>>,
 
-    shell: Arc<Mutex<Vec<String>>>,
-
     files: Arc<Mutex<Vec<String>>>,
     folders: Arc<Mutex<String>>,
     process_list: Arc<Mutex<String>>,
@@ -39,7 +38,6 @@ impl Server {
         Server {
             tauri_handle: Arc::new(Mutex::new(app_handle)),
             clients: Arc::new(Mutex::new(Vec::new())),
-            shell: Arc::new(Mutex::new(Vec::new())),
             files: Arc::new(Mutex::new(Vec::new())),
             folders: Arc::new(Mutex::new(String::new())),
             process_list: Arc::new(Mutex::new(String::new())),
@@ -61,14 +59,6 @@ impl Server {
     pub fn reset_folder_path (&mut self) {
         self.folders.lock().unwrap().clear();
     }
-
-    pub fn get_shell (&self) -> Vec<String> {
-        self.shell.lock().unwrap().clone()
-    }
-
-    pub fn reset_shell (&mut self) {
-        self.shell.lock().unwrap().clear();
-    }
     
     pub fn get_process_list (&self) -> String {
         self.process_list.lock().unwrap().clone()
@@ -79,7 +69,6 @@ impl Server {
 
         if let Ok(stream) = listener {
             let vec = Arc::clone(&self.clients);
-            let cout = Arc::clone(&self.shell);
             let fl = Arc::clone(&self.files);
             let fp = Arc::clone(&self.folders);
             let pl = Arc::clone(&self.process_list);
@@ -118,7 +107,6 @@ impl Server {
                         info[8].parse().unwrap(),
                         ip.clone(),
                         info[9].parse().unwrap(),
-                        Arc::clone(&cout),
                         Arc::clone(&fl),
                         Arc::clone(&fp),
                         Arc::clone(&pl)
@@ -134,16 +122,4 @@ impl Server {
             false
         }
     }
-}
-
-fn read_buffer(mut stream: TcpStream) -> std::io::Result<Vec<u8>> {
-    let mut size_bytes = [0_u8; 4];
-    stream.read_exact(&mut size_bytes)?;
-
-    let size = u32::from_be_bytes(size_bytes) as usize;
-
-    let mut buffer = vec![0_u8; size];
-    stream.read_exact(&mut buffer)?;
-
-    Ok(buffer)
 }

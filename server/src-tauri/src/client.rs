@@ -1,8 +1,9 @@
-use std::io::{Read,Write};
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 use base64::{engine::general_purpose, Engine as _};
 use tauri::{AppHandle, Manager};
+
+use common::buffers::{read_buffer, write_bytes};
 
 #[derive(Debug)]
 pub struct Client {
@@ -27,7 +28,6 @@ pub struct Client {
     pub is_handled: bool,
 
     pub shell_started: bool,
-    shell: Arc<Mutex<Vec<String>>>,
 
     files: Arc<Mutex<Vec<String>>>,
     folder_path: Arc<Mutex<String>>,
@@ -48,7 +48,6 @@ impl Client {
         displays: i32,
         ip: String,
         is_elevated: bool,
-        shell: Arc<Mutex<Vec<String>>>,
         files: Arc<Mutex<Vec<String>>>,
         folder_path: Arc<Mutex<String>>,
         process_list: Arc<Mutex<String>>
@@ -70,32 +69,19 @@ impl Client {
             disconnected: Arc::new(Mutex::new(false)),
             is_handled: false,
             shell_started: false,
-            shell,
             files,
             folder_path,
             process_list,
         }
     }
 
-    pub fn write(&mut self, msg: &str) -> bool {
-        let data = msg.as_bytes();
-
-        let size = data.len() as u32;
-        let size_bytes = size.to_be_bytes();
-
-        if let Err(_) = self.write_stream.write_all(&size_bytes) {
-            return false;
-        }
-        
-        let result = self.write_stream.write_all(data);
-
-        result.is_ok()  
+    pub fn write(&mut self, msg: &str) {
+        write_bytes(&mut self.write_stream, msg.as_bytes());
     }
 
     pub fn handle_client(&mut self) {
         let username_clone = self.username.clone();
         let stream_clone = Arc::clone(&self.read_stream);
-        let shell = Arc::clone(&self.shell);
         let files = Arc::clone(&self.files);
         let folder_path = Arc::clone(&self.folder_path);
         let disconnected = Arc::clone(&self.disconnected);
@@ -103,9 +89,17 @@ impl Client {
         let tauri_handle = Arc::clone(&self.tauri_handle);
         std::thread::spawn(move || {
             loop {
-                let rst = read_buffer(stream_clone.clone());
+                let mut locked_stream = stream_clone.lock().unwrap();
+                let rst = read_buffer(&mut locked_stream);
                 match rst {
                     Ok(ref array) => {
+                        let parsed_text = String::from_utf8_lossy(array.as_slice());
+
+                        if parsed_text.starts_with("shellout:") {
+                            let arr = parsed_text.split("shellout:").collect::<Vec<&str>>();
+                            let _ = tauri_handle.lock().unwrap().emit_all("client_shellout", arr[1].to_string());
+                        }
+
                         let lines = String::from_utf8_lossy(array.as_slice())
                             .split('\n').collect::<Vec<&str>>()
                             .iter().map(|f| f.to_string())
@@ -113,11 +107,6 @@ impl Client {
 
                         for t in &lines {
                             let text = t.trim().to_string();
-
-                            if text.starts_with("shellout:") {
-                                let arr = text.split("shellout:").collect::<Vec<&str>>();
-                                shell.lock().unwrap().push(arr[1].to_string());
-                            }
 
                             if text.starts_with("file_manager||") {
                                 let arr: Vec<&str> = text.split("||").collect();
@@ -214,14 +203,14 @@ impl Client {
     }
 }
 
-fn read_buffer(stream: Arc<Mutex<TcpStream>>) -> std::io::Result<Vec<u8>> {
-    let mut stream = stream.lock().unwrap();
-    let mut size_bytes = [0_u8; 4];
-    stream.read_exact(&mut size_bytes)?;
+// fn read_buffer(stream: Arc<Mutex<TcpStream>>) -> std::io::Result<Vec<u8>> {
+//     let mut stream = stream.lock().unwrap();
+//     let mut size_bytes = [0_u8; 4];
+//     stream.read_exact(&mut size_bytes)?;
 
-    let size = u32::from_be_bytes(size_bytes) as usize;
-    let mut buffer = vec![0_u8; size];
-    stream.read_exact(&mut buffer)?;
+//     let size = u32::from_be_bytes(size_bytes) as usize;
+//     let mut buffer = vec![0_u8; size];
+//     stream.read_exact(&mut buffer)?;
 
-    Ok(buffer)
-}
+//     Ok(buffer)
+// }
