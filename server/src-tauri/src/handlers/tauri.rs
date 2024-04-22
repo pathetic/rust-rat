@@ -235,8 +235,8 @@ pub fn manage_shell(id: &str, run: &str, server_state: State<'_, SharedServer>) 
 }
 
 #[tauri::command]
-pub fn execute_shell_command(id: &str, run: &str, server_state: State<'_, SharedServer>) -> String {
-    let mut server = server_state.0.lock().unwrap();
+pub fn execute_shell_command(id: &str, run: &str, server_state: State<'_, SharedServer>) {
+    let server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
 
@@ -245,19 +245,9 @@ pub fn execute_shell_command(id: &str, run: &str, server_state: State<'_, Shared
     let mut clients = server_clone.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    if !client.shell_started {
-        return "The shell is not running!".to_string();
+    if client.shell_started {
+        client.write(&format!("shell::{}", run));
     }
-
-    client.write(&format!("shell::{}", run));
-
-    std::thread::sleep(std::time::Duration::from_millis(200));
-
-    let copy_shell = server.get_shell().clone().join("\n");
-
-    server.reset_shell();
-
-    copy_shell
 }
 
 #[tauri::command]
