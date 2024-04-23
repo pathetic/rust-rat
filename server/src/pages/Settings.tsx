@@ -6,10 +6,10 @@ export const Settings: React.FC = () => {
 
   return (
     <div className="p-8 flex flex-1 flex-row overflow-auto w-full">
-      <div className="card bg-base-100 !min-w-[350px] h-[200px] shadow-xl border border-white">
+      <div className="card bg-base-100 !min-w-[350px] h-[200px] shadow-xl border border-base-content">
         <div className="card-body gap-4">
           <h2 className="card-title">Frontend Settings</h2>
-          <label className="cursor-pointer label bg-base-300 border rounded-md px-4">
+          <label className="cursor-pointer label bg-base-300 border border-base-content rounded-md px-4">
             <span className="label-text">Client Notifications</span>
             <input
               type="checkbox"

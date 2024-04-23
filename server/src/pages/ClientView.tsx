@@ -63,7 +63,7 @@ export const ClientView: React.FC = () => {
     <div className="client p-8 flex flex-1 flex-col overflow-auto w-full items-center">
       <div className="flex flex-row gap-8">
         {loaded && client != null ? (
-          <div className="card bg-base-100 !min-w-[350px] shadow-xl border border-white">
+          <div className="card bg-base-100 !min-w-[350px] shadow-xl border border-base-content">
             <div className="card-body" style={{ whiteSpace: "pre-line" }}>
               <h2 className="card-title">System Information</h2>
               <a>OS: {client.os}</a>
@@ -76,7 +76,7 @@ export const ClientView: React.FC = () => {
               <a>GPUs: {fetchVec(client.gpus)}</a>
               <a>Drives: {fetchVec(client.storage)}</a>
 
-              <div className="card bg-base-100 shadow-xl border border-white mt-4">
+              <div className="card bg-base-100 shadow-xl border border-base-content mt-4">
                 <div className="card-body">
                   <h2 className="card-title">Remote Management</h2>
                   <a
@@ -100,7 +100,7 @@ export const ClientView: React.FC = () => {
                 </div>
               </div>
 
-              <div className="card bg-base-100 shadow-xl border border-white mt-4">
+              <div className="card bg-base-100 shadow-xl border border-base-content mt-4">
                 <div className="card-body">
                   <h2 className="card-title">System Actions</h2>
                   <a
@@ -126,10 +126,10 @@ export const ClientView: React.FC = () => {
             </div>
           </div>
         ) : (
-          <div className="skeleton card bg-base-100 !min-w-[350px] shadow-xl border border-white"></div>
+          <div className="skeleton card bg-base-100 !min-w-[350px] shadow-xl border border-base-content"></div>
         )}
 
-        <div className="card bg-base-100 shadow-xl border border-white">
+        <div className="card bg-base-100 shadow-xl border border-base-content">
           <h2 className="card-title pl-12 pt-8">System Desktop</h2>
           <figure className="px-10 pt-10">
             {screenshot ? (
@@ -142,7 +142,7 @@ export const ClientView: React.FC = () => {
             )}
           </figure>
           <div className="card-body items-center text-center">
-            <div className="">
+            <div className="flex flex-row gap-4">
               {client &&
                 [...Array(client.displays).keys()].map((index) => (
                   <a

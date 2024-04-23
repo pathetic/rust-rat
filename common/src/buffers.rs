@@ -1,5 +1,6 @@
 use std::io::{Read, Write, Result};
 use std::net::TcpStream;
+use serde::{Serialize, Deserialize};
 
 pub fn read_buffer(stream: &mut TcpStream) -> Result<Vec<u8>> {
     let mut size_bytes = [0_u8; 4];
@@ -40,4 +41,24 @@ match stream.read(&mut buffer) {
         Err(())
     }
 }
+}
+
+// #[derive(Serialize, Deserialize, Debug)]
+// enum Command {
+//     InitClient(InitClient),
+//     ReceiveClient(ReceiveClient),
+//     SendPing(SendPing),
+//     ReceivePing(ReceivePing),
+// }
+
+// #[derive(Serialize, Deserialize, Debug)]
+// struct Packet {
+//     size: u32,
+//     data: Vec<u8>,
+// }
+
+#[derive(Debug, Serialize, Deserialize)]
+pub struct EncryptionRequest {
+    pub token: [u8; 32],
+    pub pub_key: Vec<u8>,
 }

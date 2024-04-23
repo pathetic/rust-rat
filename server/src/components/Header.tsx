@@ -43,7 +43,7 @@ export const Header: React.FC = () => {
   }
 
   return (
-    <div className="navbar bg-base-300 border-b border-white">
+    <div className="navbar bg-base-300 border-b border-base-content">
       <div className="navbar-start">
         <a target="_blank">
           <img
@@ -56,7 +56,7 @@ export const Header: React.FC = () => {
         <h1 className="text-lg font-bold pl-4">RAT Server</h1>
       </div>
       <div className="navbar-center">
-        <div className="input border bg-base-200 border-white">
+        <div className="input border bg-base-200 border-base-content">
           <div className="text-sm breadcrumbs">
             <ul className="text-lg hover:cursor-default">
               <li>Server</li>
