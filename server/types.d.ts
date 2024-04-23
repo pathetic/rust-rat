@@ -83,3 +83,8 @@ export type ProcessType = {
   pid: string;
   name: string;
 };
+
+export type FileType = {
+  file_type: string;
+  name: string;
+};

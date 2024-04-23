@@ -1,20 +1,29 @@
 use std::net::TcpStream;
 use sysinfo::{System, Pid};
-use common::buffers::write_bytes;
+use common::buffers::write_buffer;
+use common::commands::{ProcessList, Process, Command};
 
 pub fn process_list(write_stream: &mut TcpStream) {
     let mut s = System::new_all();
 
     s.refresh_all();
 
-    let mut processes = Vec::new();
+    let mut process_list = ProcessList {
+        processes: Vec::new()
+    };
 
     for (pid, process) in s.processes() {
-        processes.push(format!("{}||{}", pid, process.name()));
-        let procs = processes.join(",");
-        let header = "processes||".to_string();
-        write_bytes(write_stream, format!("{}{}", header, procs).as_bytes());
+        let process: Process = Process {
+            pid: pid.as_u32() as usize,
+            name: process.name().to_string()
+        };
+
+        process_list.processes.push(process);
     }
+
+    let process_command = Command::ProcessList(process_list);
+
+    write_buffer(write_stream, process_command);
 }
 
 pub fn kill_process(pid: usize) {

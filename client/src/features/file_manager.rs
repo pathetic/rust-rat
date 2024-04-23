@@ -1,25 +1,23 @@
 use std::net::TcpStream;
 use std::path::{PathBuf, Path};
 
-use common::buffers::write_bytes;
+use common::buffers::write_buffer;
+use common::commands::{Command, File, FileData};
 
-pub fn file_manager(write_stream: &mut TcpStream, current_path: &mut PathBuf, command: &str) {
+pub fn file_manager(write_stream: &mut TcpStream, current_path: &mut PathBuf, command: &str, path: &str) {
     match command {
-        "available_disks" => list_available_disks(write_stream),
-        "previous_dir" => navigate_to_parent(write_stream, current_path),
-        cmd if cmd.starts_with("view_dir||") => view_folder(write_stream, current_path, &cmd[10..]),
-        cmd if cmd.starts_with("remove_dir||") => remove_directory(write_stream, current_path, &cmd[12..]),
-        cmd if cmd.starts_with("remove_file||") => remove_file(write_stream, current_path, &cmd[13..]),
-        cmd if cmd.starts_with("download_file||") => download_file(write_stream, current_path, &cmd[15..]),
+        "AVAILABLE_DISKS" => list_available_disks(write_stream),
+        "PREVIOUS_DIR" => navigate_to_parent(write_stream, current_path),
+        "VIEW_DIR" => view_folder(write_stream, current_path, path),
+        "REMOVE_DIR" => remove_directory(write_stream, current_path, path),
+        "REMOVE_FILE" => remove_file(write_stream, current_path, path),
+        "DOWNLOAD_FILE" => download_file(write_stream, current_path, path),
         _ => {}
     }
 }
 
 fn list_available_disks(write_stream: &mut TcpStream) {
-    let disks = get_available_disks();
-    for disk in disks {
-        write_bytes(write_stream, format!("disks||{}:\\", disk).as_bytes());
-    }
+    write_buffer(write_stream , Command::DisksResult(get_available_disks()));
 }
 
 fn navigate_to_parent(write_stream: &mut TcpStream, current_path: &mut PathBuf) {
@@ -40,14 +38,15 @@ fn view_folder(write_stream: &mut TcpStream, current_path: &mut PathBuf, folder:
 
 fn list_directory_contents(write_stream: &mut TcpStream, path: &Path) {
     if let Ok(entries) = path.read_dir() {
+        let mut file_entries: Vec<File> = Vec::new();
         for entry in entries.filter_map(Result::ok) {
             match entry.file_type() {
                 Ok(file_type) => {
                     let name = entry.file_name().to_string_lossy().to_string();
                     if file_type.is_dir() {
-                        write_bytes(write_stream, format!("file_manager||dir||{}\n", name).as_bytes());
+                        file_entries.push(File{file_type: "dir".to_string(), name: name.clone()});
                     } else if file_type.is_file() {
-                        write_bytes(write_stream, format!("file_manager||file||{}\n", name).as_bytes());
+                        file_entries.push(File{file_type: "file".to_string(), name: name.clone()});
                     }
                 },
                 Err(e) => {
@@ -55,6 +54,7 @@ fn list_directory_contents(write_stream: &mut TcpStream, path: &Path) {
                 }
             }
         }
+        write_buffer(write_stream, Command::FileList(file_entries));
     } else {
         eprintln!("Could not read directory: {}", path.display());
     }
@@ -78,8 +78,7 @@ fn remove_file(write_stream: &mut TcpStream, current_path: &mut Path, file: &str
 fn download_file(write_stream: &mut TcpStream, current_path: &Path, filename: &str) {
     let file_path = current_path.join(filename);
     if let Ok(data) = std::fs::read(&file_path) {
-        let header = format!("downloadedfile||{}||", filename);
-        write_bytes(write_stream, &[header.as_bytes(), &data].concat());
+        write_buffer(write_stream, Command::DonwloadFileResult(FileData{name: filename.to_string(), data}));
     } else {
         eprintln!("Failed to read file: {}", file_path.display());
     }
@@ -102,6 +101,5 @@ fn get_available_disks() -> Vec<String> {
 }
 
 fn write_current_folder(write_stream: &mut TcpStream, current_path: &Path) {
-    let path_str = format!("current_folder||{}\n", current_path.to_string_lossy());
-    write_bytes(write_stream, path_str.as_bytes());
+    write_buffer(write_stream, Command::CurrentFolder(current_path.to_string_lossy().to_string()));
 }

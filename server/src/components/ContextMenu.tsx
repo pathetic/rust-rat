@@ -54,6 +54,20 @@ const menuOptions = [
     ],
     navigate: false,
   },
+  {
+    label: "Connection",
+    icon: <i className="ri-link ri-2x text-base-content"></i>,
+    options: [
+      {
+        label: "Reconnect",
+        icon: <i className="ri-triangle-line ri-2x text-success"></i>,
+      },
+      {
+        label: "Disconnect",
+        icon: <i className="ri-pentagon-line ri-2x text-error"></i>,
+      },
+    ],
+  },
 ];
 
 const SubMenu: React.FC<SubMenuProps> = ({
@@ -67,7 +81,7 @@ const SubMenu: React.FC<SubMenuProps> = ({
   return (
     <div
       style={{ top: `${top}px`, left: `${left + 2}px` }}
-      className="fixed shadow-lg border border-white rounded-md list-none flex flex-col text-center"
+      className="fixed shadow-lg border border-base-content rounded-md list-none flex flex-col text-center bg-base-200"
     >
       {items.map((item, index) => (
         <div
@@ -123,7 +137,7 @@ export const ContextMenu: React.FC<ContextMenuProps> = ({
 
   return (
     <div
-      className={`fixed context-menu top-[${y}px] left-[${x}px] bg-base-200 border border-white rounded-md list-none flex flex-col text-center`}
+      className={`fixed context-menu top-[${y}px] left-[${x}px] bg-base-200 border border-base-content rounded-md list-none flex flex-col text-center`}
       style={{
         top: `${y}px`,
         left: `${x}px`,

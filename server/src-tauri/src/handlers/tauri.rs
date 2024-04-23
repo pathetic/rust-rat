@@ -4,6 +4,8 @@ use tauri::State;
 
 use crate::server::Server;
 
+use common::commands::{Command, File, Process};
+
 pub struct SharedServer(pub Arc<Mutex<Server>>);
 pub struct SharedTauriState(pub Arc<Mutex<TauriState>>);
 
@@ -140,7 +142,7 @@ pub fn fetch_client (id: &str, server_state: State<'_, SharedServer>) -> FrontCl
 
 
 #[tauri::command]
-pub fn read_files(id: &str, run: &str, server_state: State<'_, SharedServer>) -> (String, Vec<String>) {
+pub fn read_files(id: &str, run: &str, path: &str, server_state: State<'_, SharedServer>) -> (String, Vec<File>) {
     let mut server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
@@ -151,7 +153,20 @@ pub fn read_files(id: &str, run: &str, server_state: State<'_, SharedServer>) ->
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write(run);
+    match run {
+        "previous_dir" => {
+            client.write_buffer(Command::PreviousDir);
+        },
+        "available_disks" => {
+            client.write_buffer(Command::AvailableDisks);
+        },
+        "view_dir" => {
+            client.write_buffer(Command::ViewDir(path.to_string()));
+        },
+        _ => {
+            return ("".to_string(), vec![]);
+        }
+    }
 
     std::thread::sleep(std::time::Duration::from_millis(200));
 
@@ -159,7 +174,7 @@ pub fn read_files(id: &str, run: &str, server_state: State<'_, SharedServer>) ->
 }
 
 #[tauri::command]
-pub fn manage_file(id: &str, run: &str, server_state: State<'_, SharedServer>) -> String {
+pub fn manage_file(id: &str, run: &str, file: &str, server_state: State<'_, SharedServer>) -> String {
     let server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
@@ -167,7 +182,20 @@ pub fn manage_file(id: &str, run: &str, server_state: State<'_, SharedServer>) -
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write(run);
+    match run {
+        "download_file" => {
+            client.write_buffer(Command::DownloadFile(file.to_string()));
+        },
+        "remove_file" => {
+            client.write_buffer(Command::RemoveFile(file.to_string()));
+        },
+        "remove_dir" => {
+            client.write_buffer(Command::RemoveDir(file.to_string()));
+        },
+        _ => {
+            return "false".to_string();
+        }
+    }
     
     "true".to_string()
 }
@@ -181,7 +209,7 @@ pub fn take_screenshot(id: &str, display: i32, server_state: State<'_, SharedSer
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write(format!("take_screenshot::{}", display).as_str());
+    client.write_buffer(Command::ScreenshotDisplay(display.to_string()));
 }
 
 #[tauri::command]
@@ -193,7 +221,7 @@ pub fn handle_system_command(id: &str, run: &str, server_state: State<'_, Shared
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write(run);
+    client.write_buffer(Command::ManageSystem(run.to_string()));
     
     "true".to_string()
 }
@@ -212,7 +240,7 @@ pub fn manage_shell(id: &str, run: &str, server_state: State<'_, SharedServer>) 
             return "true".to_string();
         }
         client.shell_started = true;
-        client.write("start_shell");
+        client.write_buffer(Command::StartShell);
         return "true".to_string();
     }
 
@@ -221,7 +249,7 @@ pub fn manage_shell(id: &str, run: &str, server_state: State<'_, SharedServer>) 
             return "false".to_string();
         }
         client.shell_started = false;
-        client.write("exit_shell");
+        client.write_buffer(Command::ExitShell);
         return "false".to_string();
     }
 
@@ -246,12 +274,14 @@ pub fn execute_shell_command(id: &str, run: &str, server_state: State<'_, Shared
     let client = clients.get_mut(client_id).unwrap();
 
     if client.shell_started {
-        client.write(&format!("shell::{}", run));
+        let shell_cmd = Command::ShellCommand(run.to_string());
+
+        client.write_buffer(shell_cmd);
     }
 }
 
 #[tauri::command]
-pub fn process_list(id: &str, server_state: State<'_, SharedServer>) -> String {
+pub fn process_list(id: &str, server_state: State<'_, SharedServer>) {
     let server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
@@ -259,15 +289,11 @@ pub fn process_list(id: &str, server_state: State<'_, SharedServer>) -> String {
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write("process_list");
-
-    std::thread::sleep(std::time::Duration::from_millis(200));
-
-    server.get_process_list()
+    client.write_buffer(Command::GetProcessList);
 }
 
 #[tauri::command]
-pub fn kill_process(id: &str, pid: usize, server_state: State<'_, SharedServer>) -> String {
+pub fn kill_process(id: &str, pid: usize, name: &str, server_state: State<'_, SharedServer>) -> String {
     let server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
@@ -275,7 +301,12 @@ pub fn kill_process(id: &str, pid: usize, server_state: State<'_, SharedServer>)
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write(&format!("kill_process::{}", pid));
+    let process = Process {
+        pid,
+        name: name.to_string(),
+    };
+
+    client.write_buffer(Command::KillProcess(process));
 
     "true".to_string()
 }
