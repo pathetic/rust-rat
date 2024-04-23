@@ -1,4 +1,5 @@
 pub mod buffers;
+pub mod commands;
 
 pub const RSA_BITS: usize = 1024;
 pub const ENC_TOK_LEN: usize = 32;

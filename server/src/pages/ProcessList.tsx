@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/tauri";
+import { listen } from "@tauri-apps/api/event";
 import { ProcessType } from "../../types";
 
 export const ProcessList: React.FC = () => {
@@ -8,23 +9,25 @@ export const ProcessList: React.FC = () => {
   const [processes, setProcesses] = useState<ProcessType[] | null>(null);
   const [processFilter, setProcessFilter] = useState("");
 
+  async function waitProcessList() {
+    listen("process_list", (event: any) => {
+      const parsedProcesses = event.payload.processes.map(
+        (process: { pid: number; name: string }) => ({
+          pid: process.pid.toString(),
+          name: process.name,
+        })
+      );
+
+      setProcesses(parsedProcesses);
+    });
+  }
+
   async function fetchProcessList() {
-    let ok: string = await invoke("process_list", { id: id });
-
-    const entries = ok.replace("processes||", "").split(",");
-
-    setProcesses(
-      entries.map((entry) => {
-        const parts = entry.split("||");
-        return {
-          pid: parts[0],
-          name: parts[1],
-        };
-      })
-    );
+    await invoke("process_list", { id: id });
   }
 
   useEffect(() => {
+    waitProcessList();
     fetchProcessList();
   }, []);
 
@@ -79,6 +82,7 @@ export const ProcessList: React.FC = () => {
                             invoke("kill_process", {
                               id: id,
                               pid: parseInt(process.pid),
+                              name: process.name,
                             })
                           }
                         >

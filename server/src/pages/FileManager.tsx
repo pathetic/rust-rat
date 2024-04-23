@@ -1,6 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { invoke } from "@tauri-apps/api/tauri";
+import { FileType } from "../../types";
 
 let fileIcon = {
   dir: <i className="ri-folder-fill" style={{ color: "yellow" }}></i>,
@@ -12,7 +13,7 @@ export const FileManager: React.FC = () => {
   const { id } = useParams();
 
   const [path, setPath] = useState("");
-  const [files, setFiles] = useState<Array<string> | null>(null);
+  const [files, setFiles] = useState<Array<FileType> | null>(null);
 
   const filesRef = useRef<HTMLDivElement>(null);
 
@@ -58,12 +59,15 @@ export const FileManager: React.FC = () => {
           ? "previous_dir"
           : folder == "disks"
           ? "available_disks"
-          : "view_dir||" + folder
+          : "view_dir"
       }`,
+      path: folder,
     });
 
+    console.log(ok);
+
     setPath(ok[0]);
-    setFiles(ok[1] as unknown as Array<string>);
+    setFiles(ok[1] as unknown as Array<FileType>);
 
     if (filesRef.current)
       filesRef.current.scrollIntoView({ behavior: "smooth" });
@@ -72,7 +76,8 @@ export const FileManager: React.FC = () => {
   async function manageFile(command: string, fileName: string) {
     await invoke("manage_file", {
       id: id,
-      run: `${command}||${fileName}`,
+      run: command,
+      file: fileName,
     });
   }
 
@@ -143,31 +148,27 @@ export const FileManager: React.FC = () => {
           {files && files.length > 0 && (
             <>
               {files.map((file) => {
-                const parts = file.split("||");
-                const fileName = parts[0];
-                const fileType = parts[1];
-
-                if (fileType == "dir") {
+                if (file.file_type == "dir") {
                   return (
                     <div
-                      key={file}
+                      key={file.name}
                       className="flex flex-row w-full gap-6 items-center mt-2"
                     >
                       <div
-                        onClick={() => fetchFolder(fileName)}
+                        onClick={() => fetchFolder(file.name)}
                         className="w-[350px] p-3 flex flex-row gap-4 text-xl bg-base-300 hover:cursor-pointer rounded-lg"
                       >
-                        {fileIcon[fileType]}
+                        {fileIcon[file.file_type]}
                         <div
                           className="tooltip break-words"
-                          data-tip={fileName}
+                          data-tip={file.name}
                         >
                           <span className="flex justify-start	w-[290px] text-ellipsis !overflow-hidden whitespace-nowrap">
-                            {fileName}
+                            {file.name}
                           </span>
                         </div>
                       </div>
-                      {fileActions(fileType, fileName)}
+                      {fileActions(file.file_type, file.name)}
                     </div>
                   );
                 }
@@ -180,27 +181,23 @@ export const FileManager: React.FC = () => {
           {files && files.length > 0 && (
             <>
               {files.map((file) => {
-                const parts = file.split("||");
-                const fileName = parts[0];
-                const fileType = parts[1];
-
-                if (fileType == "file") {
+                if (file.file_type == "file") {
                   return (
                     <div
-                      key={fileName}
+                      key={file.name}
                       className="flex flex-col justify-center items-center align-center w-48 h-48 bg-base-300 rounded-lg"
                     >
-                      {fileExtension(fileName)}
+                      {fileExtension(file.name)}
                       <div
                         className="tooltip mb-4 break-words"
-                        data-tip={fileName}
+                        data-tip={file.name}
                       >
                         <span className="w-48 text-ellipsis !overflow-hidden whitespace-nowrap inline-block px-6">
-                          {fileName}
+                          {file.name}
                         </span>
                       </div>
 
-                      {fileActions(fileType, fileName)}
+                      {fileActions(file.file_type, file.name)}
                     </div>
                   );
                 }

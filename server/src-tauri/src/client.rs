@@ -3,7 +3,8 @@ use std::sync::{Arc, Mutex};
 use base64::{engine::general_purpose, Engine as _};
 use tauri::{AppHandle, Manager};
 
-use common::buffers::{read_buffer, write_bytes};
+use common::buffers::{read_buffer, write_buffer};
+use common::commands::{Command, File};
 
 #[derive(Debug)]
 pub struct Client {
@@ -29,9 +30,8 @@ pub struct Client {
 
     pub shell_started: bool,
 
-    files: Arc<Mutex<Vec<String>>>,
-    folder_path: Arc<Mutex<String>>,
-    process_list: Arc<Mutex<String>>,
+    files: Arc<Mutex<Vec<File>>>,
+    current_path: Arc<Mutex<String>>,
 }
 
 impl Client {
@@ -48,9 +48,8 @@ impl Client {
         displays: i32,
         ip: String,
         is_elevated: bool,
-        files: Arc<Mutex<Vec<String>>>,
-        folder_path: Arc<Mutex<String>>,
-        process_list: Arc<Mutex<String>>
+        files: Arc<Mutex<Vec<File>>>,
+        current_path: Arc<Mutex<String>>,
     ) -> Self {
         Client {
             tauri_handle,
@@ -70,80 +69,60 @@ impl Client {
             is_handled: false,
             shell_started: false,
             files,
-            folder_path,
-            process_list,
+            current_path,
         }
     }
 
-    pub fn write(&mut self, msg: &str) {
-        write_bytes(&mut self.write_stream, msg.as_bytes());
+    pub fn write_buffer(&mut self, command: Command) {
+        write_buffer(&mut self.write_stream, command)
     }
 
     pub fn handle_client(&mut self) {
         let username_clone = self.username.clone();
         let stream_clone = Arc::clone(&self.read_stream);
         let files = Arc::clone(&self.files);
-        let folder_path = Arc::clone(&self.folder_path);
+        let current_path = Arc::clone(&self.current_path);
         let disconnected = Arc::clone(&self.disconnected);
-        let process_list = Arc::clone(&self.process_list);
         let tauri_handle = Arc::clone(&self.tauri_handle);
+
         std::thread::spawn(move || {
             loop {
                 let mut locked_stream = stream_clone.lock().unwrap();
-                let rst = read_buffer(&mut locked_stream);
-                match rst {
-                    Ok(ref array) => {
-                        let parsed_text = String::from_utf8_lossy(array.as_slice());
+                let received_data = read_buffer(&mut locked_stream);
 
-                        if parsed_text.starts_with("shellout:") {
-                            let arr = parsed_text.split("shellout:").collect::<Vec<&str>>();
-                            let _ = tauri_handle.lock().unwrap().emit_all("client_shellout", arr[1].to_string());
-                        }
-
-                        let lines = String::from_utf8_lossy(array.as_slice())
-                            .split('\n').collect::<Vec<&str>>()
-                            .iter().map(|f| f.to_string())
-                            .collect::<Vec<String>>();
-
-                        for t in &lines {
-                            let text = t.trim().to_string();
-
-                            if text.starts_with("file_manager||") {
-                                let arr: Vec<&str> = text.split("||").collect();
-                                files.lock().unwrap().push(format!("{}||{}", arr[2], arr[1]))
+                match received_data {
+                    Ok(received) => {
+                        match received {
+                            Command::ProcessList(process_list) => {
+                                let _ = tauri_handle.lock().unwrap().emit_all("process_list", process_list);
                             }
-
-                            if text.starts_with("disks||") {
-                                let arr: Vec<&str> = text.split("||").collect();
-                                files.lock().unwrap().push(format!("{}||dir", arr[1]));
+                            Command::ShellOutput(shell_output) => {
+                                let _ = tauri_handle.lock().unwrap().emit_all("client_shellout", shell_output);
                             }
-
-                            if text.starts_with("current_folder||") {
-                                let arr: Vec<&str> = text.split("||").collect();
-                                *folder_path.lock().unwrap() = arr[1].to_string();
+                            Command::ScreenshotResult(screenshot) => {
+                                let base64_img = general_purpose::STANDARD.encode(screenshot);
+                                let _ = tauri_handle.lock().unwrap().emit_all("client_screenshot", base64_img);
                             }
-
-                            if text.starts_with("downloadedfile||") {
-                                let arr: Vec<&str> = text.split("||").collect();
-                                let file_name = arr[1];
-                                let len = 16 + file_name.len() + 2;
-                                let file = &array[len..array.len()];
-
-                                let _ = std::fs::write(file_name, file);
+                            Command::DisksResult(disks) => {
+                                for disk in disks {
+                                    files.lock().unwrap().push(File{file_type: "dir".to_string(), name: format!("{}:\\", disk)});
+                                }
                             }
-
-                            if text.starts_with("screenshot||") {
-                                let img = &array[12..array.len()];
-                                let vec_img: Vec<u8> = img.to_vec();
-                                
-                                let base64_img = general_purpose::STANDARD.encode(vec_img);
-
-                                let _ = tauri_handle.lock().unwrap().emit_all("client_screenshot", base64_img.clone());
+                            Command::CurrentFolder(folder) => {
+                                *current_path.lock().unwrap() = folder;
                             }
-
-                            if text.starts_with("processes||") {
-                                let arr: Vec<&str> = text.split("processes||").collect();
-                                *process_list.lock().unwrap() = arr[1].to_string();
+                            Command::FileList(files_list) => {
+                                let mut files = files.lock().unwrap();
+                                files.clear();
+                                for file in files_list {
+                                    files.push(file);
+                                }
+                            }
+                            Command::DonwloadFileResult(data) => {
+                                let _ = std::fs::write(data.name, data.data);
+                            }
+                            _ => {
+                                println!("Received unknown or unhandled data.");
                             }
                         }
                     },
@@ -153,9 +132,70 @@ impl Client {
                         break;
                     }
                 }
-            }
-            *disconnected.lock().unwrap() = true;
+                }
+                *disconnected.lock().unwrap() = true;
         });
+
+        // std::thread::spawn(move || {
+        //     loop {
+        //         let mut locked_stream = stream_clone.lock().unwrap();
+        //         let rst = read_buffer(&mut locked_stream);
+        //         match rst {
+        //             Ok(ref array) => {
+        //                 let parsed_text = String::from_utf8_lossy(array.as_slice());
+
+
+        //                 for t in &lines {
+        //                     let text = t.trim().to_string();
+
+        //                     if text.starts_with("file_manager||") {
+        //                         let arr: Vec<&str> = text.split("||").collect();
+        //                         files.lock().unwrap().push(format!("{}||{}", arr[2], arr[1]))
+        //                     }
+
+        //                     if text.starts_with("disks||") {
+        //                         let arr: Vec<&str> = text.split("||").collect();
+        //                         files.lock().unwrap().push(format!("{}||dir", arr[1]));
+        //                     }
+
+        //                     if text.starts_with("current_folder||") {
+        //                         let arr: Vec<&str> = text.split("||").collect();
+        //                         *folder_path.lock().unwrap() = arr[1].to_string();
+        //                     }
+
+        //                     if text.starts_with("downloadedfile||") {
+        //                         let arr: Vec<&str> = text.split("||").collect();
+        //                         let file_name = arr[1];
+        //                         let len = 16 + file_name.len() + 2;
+        //                         let file = &array[len..array.len()];
+
+        //                         let _ = std::fs::write(file_name, file);
+        //                     }
+
+        //                     if text.starts_with("screenshot||") {
+        //                         let img = &array[12..array.len()];
+        //                         let vec_img: Vec<u8> = img.to_vec();
+                                
+        //                         let base64_img = general_purpose::STANDARD.encode(vec_img);
+
+        //                         let _ = tauri_handle.lock().unwrap().emit_all("client_screenshot", base64_img.clone());
+        //                     }
+
+        //                     if text.starts_with("processes||") {
+        //                         let arr: Vec<&str> = text.split("processes||").collect();
+        //                         *process_list.lock().unwrap() = arr[1].to_string();
+        //                     }
+        //                 }
+        //             },
+        //             Err(_) => {
+        //                 let _ = tauri_handle.lock().unwrap().emit_all("client_disconnected", username_clone);
+        //                 println!("Disconnected!");
+        //                 break;
+        //             }
+        //         }
+        //     }
+        //     *disconnected.lock().unwrap() = true;
+        // });
     }
 
     pub fn get_username(&self) -> String {
