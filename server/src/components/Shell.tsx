@@ -101,7 +101,6 @@ export const Command: React.FC<CommandProps> = ({ id, shellStatus }) => {
           onKeyDown={(e: React.KeyboardEvent<HTMLInputElement>) => {
             keybindings(
               e,
-              inputRef,
               setCommand,
               setUpArrowKeyPressed,
               setCurrentCommand,

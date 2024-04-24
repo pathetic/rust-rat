@@ -3,7 +3,6 @@ import { ShellCommandType } from "../../types";
 
 export const keybindings = async (
   e: React.KeyboardEvent<HTMLInputElement>,
-  inputRef: React.RefObject<HTMLInputElement>,
   setCommand: React.Dispatch<React.SetStateAction<ShellCommandType[]>>,
   setUpArrowKeyPressed: React.Dispatch<React.SetStateAction<number>>,
   setCurrentCommand: React.Dispatch<React.SetStateAction<string>>,

@@ -1,13 +1,16 @@
-use serde::{Serialize, Deserialize};
+use serde::{ Serialize, Deserialize };
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
+    EncryptionRequest(EncryptionRequestData),
+    EncryptionResponse(EncryptionResponseData),
+
     InitClient,
-    Client(ReceiveClient),
+    Client(ClientInfo),
 
     Reconnect,
     Disconnect,
-    
+
     GetProcessList,
     ProcessList(ProcessList),
     KillProcess(Process),
@@ -36,7 +39,7 @@ pub enum Command {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ReceiveClient {
+pub struct ClientInfo {
     pub username: String,
     pub hostname: String,
     pub os: String,
@@ -45,28 +48,38 @@ pub struct ReceiveClient {
     pub gpus: Vec<String>,
     pub storage: Vec<String>,
     pub displays: i32,
-    pub is_elevated: bool
+    pub is_elevated: bool,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct ProcessList {
-    pub processes: Vec<Process>
+    pub processes: Vec<Process>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct Process {
     pub pid: usize,
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct File {
     pub file_type: String,
-    pub name: String
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 pub struct FileData {
     pub name: String,
-    pub data: Vec<u8>
+    pub data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EncryptionRequestData {
+    pub public_key: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EncryptionResponseData {
+    pub secret: Vec<u8>,
 }

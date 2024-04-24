@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
-import { invoke } from "@tauri-apps/api/tauri";
 import { listen } from "@tauri-apps/api/event";
 import { ProcessType } from "../../types";
+import { processListCmd, killProcessCmd } from "../rat/RATCommands";
 
 export const ProcessList: React.FC = () => {
   const { id } = useParams();
@@ -23,7 +23,7 @@ export const ProcessList: React.FC = () => {
   }
 
   async function fetchProcessList() {
-    await invoke("process_list", { id: id });
+    await processListCmd(id);
   }
 
   useEffect(() => {
@@ -79,11 +79,11 @@ export const ProcessList: React.FC = () => {
                         <button
                           className="btn btn-active no-animation"
                           onClick={() =>
-                            invoke("kill_process", {
-                              id: id,
-                              pid: parseInt(process.pid),
-                              name: process.name,
-                            })
+                            killProcessCmd(
+                              id,
+                              parseInt(process.pid),
+                              process.name
+                            )
                           }
                         >
                           <i

