@@ -10,6 +10,6 @@ opt-level = 'z'
 debug = false
 debug-assertions = false
 
-[profile.release.package.server]
-debug = true
-debug-assertions = true
+# [profile.release.package.server]
+# debug = true
+# debug-assertions = true

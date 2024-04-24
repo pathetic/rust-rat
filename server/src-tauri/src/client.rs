@@ -1,10 +1,10 @@
 use std::net::TcpStream;
-use std::sync::{Arc, Mutex};
-use base64::{engine::general_purpose, Engine as _};
-use tauri::{AppHandle, Manager};
+use std::sync::{ Arc, Mutex };
+use base64::{ engine::general_purpose, Engine as _ };
+use tauri::{ AppHandle, Manager };
 
-use common::buffers::{read_buffer, write_buffer};
-use common::commands::{Command, File};
+use common::buffers::{ read_buffer, write_buffer };
+use common::commands::{ Command, File };
 
 #[derive(Debug)]
 pub struct Client {
@@ -47,9 +47,7 @@ impl Client {
         storage: Vec<String>,
         displays: i32,
         ip: String,
-        is_elevated: bool,
-        files: Arc<Mutex<Vec<File>>>,
-        current_path: Arc<Mutex<String>>,
+        is_elevated: bool
     ) -> Self {
         Client {
             tauri_handle,
@@ -68,8 +66,8 @@ impl Client {
             disconnected: Arc::new(Mutex::new(false)),
             is_handled: false,
             shell_started: false,
-            files,
-            current_path,
+            files: Arc::new(Mutex::new(Vec::new())),
+            current_path: Arc::new(Mutex::new("".to_string())),
         }
     }
 
@@ -94,18 +92,33 @@ impl Client {
                     Ok(received) => {
                         match received {
                             Command::ProcessList(process_list) => {
-                                let _ = tauri_handle.lock().unwrap().emit_all("process_list", process_list);
+                                let _ = tauri_handle
+                                    .lock()
+                                    .unwrap()
+                                    .emit_all("process_list", process_list);
                             }
                             Command::ShellOutput(shell_output) => {
-                                let _ = tauri_handle.lock().unwrap().emit_all("client_shellout", shell_output);
+                                let _ = tauri_handle
+                                    .lock()
+                                    .unwrap()
+                                    .emit_all("client_shellout", shell_output);
                             }
                             Command::ScreenshotResult(screenshot) => {
                                 let base64_img = general_purpose::STANDARD.encode(screenshot);
-                                let _ = tauri_handle.lock().unwrap().emit_all("client_screenshot", base64_img);
+                                let _ = tauri_handle
+                                    .lock()
+                                    .unwrap()
+                                    .emit_all("client_screenshot", base64_img);
                             }
                             Command::DisksResult(disks) => {
                                 for disk in disks {
-                                    files.lock().unwrap().push(File{file_type: "dir".to_string(), name: format!("{}:\\", disk)});
+                                    files
+                                        .lock()
+                                        .unwrap()
+                                        .push(File {
+                                            file_type: "dir".to_string(),
+                                            name: format!("{}:\\", disk),
+                                        });
                                 }
                             }
                             Command::CurrentFolder(folder) => {
@@ -125,77 +138,19 @@ impl Client {
                                 println!("Received unknown or unhandled data.");
                             }
                         }
-                    },
+                    }
                     Err(_) => {
-                        let _ = tauri_handle.lock().unwrap().emit_all("client_disconnected", username_clone);
+                        let _ = tauri_handle
+                            .lock()
+                            .unwrap()
+                            .emit_all("client_disconnected", username_clone);
                         println!("Disconnected!");
                         break;
                     }
                 }
-                }
-                *disconnected.lock().unwrap() = true;
+            }
+            *disconnected.lock().unwrap() = true;
         });
-
-        // std::thread::spawn(move || {
-        //     loop {
-        //         let mut locked_stream = stream_clone.lock().unwrap();
-        //         let rst = read_buffer(&mut locked_stream);
-        //         match rst {
-        //             Ok(ref array) => {
-        //                 let parsed_text = String::from_utf8_lossy(array.as_slice());
-
-
-        //                 for t in &lines {
-        //                     let text = t.trim().to_string();
-
-        //                     if text.starts_with("file_manager||") {
-        //                         let arr: Vec<&str> = text.split("||").collect();
-        //                         files.lock().unwrap().push(format!("{}||{}", arr[2], arr[1]))
-        //                     }
-
-        //                     if text.starts_with("disks||") {
-        //                         let arr: Vec<&str> = text.split("||").collect();
-        //                         files.lock().unwrap().push(format!("{}||dir", arr[1]));
-        //                     }
-
-        //                     if text.starts_with("current_folder||") {
-        //                         let arr: Vec<&str> = text.split("||").collect();
-        //                         *folder_path.lock().unwrap() = arr[1].to_string();
-        //                     }
-
-        //                     if text.starts_with("downloadedfile||") {
-        //                         let arr: Vec<&str> = text.split("||").collect();
-        //                         let file_name = arr[1];
-        //                         let len = 16 + file_name.len() + 2;
-        //                         let file = &array[len..array.len()];
-
-        //                         let _ = std::fs::write(file_name, file);
-        //                     }
-
-        //                     if text.starts_with("screenshot||") {
-        //                         let img = &array[12..array.len()];
-        //                         let vec_img: Vec<u8> = img.to_vec();
-                                
-        //                         let base64_img = general_purpose::STANDARD.encode(vec_img);
-
-        //                         let _ = tauri_handle.lock().unwrap().emit_all("client_screenshot", base64_img.clone());
-        //                     }
-
-        //                     if text.starts_with("processes||") {
-        //                         let arr: Vec<&str> = text.split("processes||").collect();
-        //                         *process_list.lock().unwrap() = arr[1].to_string();
-        //                     }
-        //                 }
-        //             },
-        //             Err(_) => {
-        //                 let _ = tauri_handle.lock().unwrap().emit_all("client_disconnected", username_clone);
-        //                 println!("Disconnected!");
-        //                 break;
-        //             }
-        //         }
-        //     }
-        //     *disconnected.lock().unwrap() = true;
-        // });
     }
 
     pub fn get_username(&self) -> String {
@@ -241,16 +196,20 @@ impl Client {
     pub fn is_disconnect(&self) -> bool {
         *self.disconnected.lock().unwrap()
     }
+
+    pub fn get_files(&self) -> Vec<File> {
+        self.files.lock().unwrap().clone()
+    }
+
+    pub fn reset_files(&self) {
+        self.files.lock().unwrap().clear();
+    }
+
+    pub fn get_path(&self) -> String {
+        self.current_path.lock().unwrap().clone()
+    }
+
+    pub fn reset_path(&self) {
+        self.current_path.lock().unwrap().clear();
+    }
 }
-
-// fn read_buffer(stream: Arc<Mutex<TcpStream>>) -> std::io::Result<Vec<u8>> {
-//     let mut stream = stream.lock().unwrap();
-//     let mut size_bytes = [0_u8; 4];
-//     stream.read_exact(&mut size_bytes)?;
-
-//     let size = u32::from_be_bytes(size_bytes) as usize;
-//     let mut buffer = vec![0_u8; size];
-//     stream.read_exact(&mut buffer)?;
-
-//     Ok(buffer)
-// }

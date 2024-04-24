@@ -19,13 +19,13 @@ pub fn mutex_lock() {
         if mutex_handle.is_null() {
             exit(0);
         }
-        
+
         let last_error = GetLastError();
         if last_error == ERROR_ALREADY_EXISTS {
             CloseHandle(mutex_handle);
             exit(0);
         }
-        
+
         CloseHandle(mutex_handle);
     }
 }

@@ -19,7 +19,7 @@ export const Server: React.FC = () => {
 
       setRunning(true);
 
-      const delayPromise = new Promise((resolve, reject) => {
+      const delayPromise = new Promise((resolve) => {
         setTimeout(() => {
           navigate("/home");
           resolve("Redirect complete");

