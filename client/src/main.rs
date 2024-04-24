@@ -27,8 +27,6 @@ fn handle_server(mut read_stream: TcpStream, mut write_stream: TcpStream, is_con
     let mut secret = [0u8; common::SECRET_LEN];
     OsRng.fill(&mut secret);
 
-    
-
     loop {
         let received_command = read_buffer(&mut read_stream);
         match received_command {

@@ -3,7 +3,7 @@ use serde::{Serialize, Deserialize};
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
     InitClient,
-    Client(ReceiveClient),
+    Client(ClientInfo),
 
     Reconnect,
     Disconnect,
@@ -36,7 +36,7 @@ pub enum Command {
 }
 
 #[derive(Serialize, Deserialize, Debug)]
-pub struct ReceiveClient {
+pub struct ClientInfo {
     pub username: String,
     pub hostname: String,
     pub os: String,

@@ -16,7 +16,7 @@ use anyhow::Context;
 use rsa::pkcs8::EncodePublicKey;
 use base64::{engine::general_purpose, Engine as _};
 
-use common::commands::{Command, ReceiveClient, File};
+use common::commands::{Command, ClientInfo, File};
 
 
 fn encryption_request(mut stream: TcpStream, pub_key: Vec<u8>) -> String {
@@ -38,7 +38,7 @@ fn encryption_request(mut stream: TcpStream, pub_key: Vec<u8>) -> String {
     token
 }
 
-fn get_client(mut stream: TcpStream) -> ReceiveClient {
+fn get_client(mut stream: TcpStream) -> ClientInfo {
     write_buffer(&mut stream, Command::InitClient);
 
     let rcv = read_buffer(&mut stream.try_clone().unwrap()).unwrap();

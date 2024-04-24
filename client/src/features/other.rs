@@ -17,7 +17,7 @@ use std::ptr;
 use crate::service::install::is_elevated;
 
 use common::buffers::write_buffer;
-use common::commands::{ReceiveClient, Command};
+use common::commands::{ClientInfo, Command};
 
 pub fn take_screenshot(write_stream: &mut TcpStream, display: i32) {
     let screens = Screen::all().unwrap();
@@ -88,7 +88,7 @@ pub fn client_info(write_stream: &mut TcpStream) {
     std::thread::sleep(sysinfo::MINIMUM_CPU_UPDATE_INTERVAL);
     s.refresh_cpu();
 
-    let client_data: ReceiveClient = ReceiveClient {
+    let client_data = ClientInfo {
         username: std::env::var("username").unwrap_or_else(|_| "__UNKNOWN__".to_string()),
         hostname: System::host_name().unwrap().to_string(),
         os: format!("{} {}", System::name().unwrap(), System::os_version().unwrap()),
