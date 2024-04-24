@@ -15,32 +15,27 @@ use rsa::{ traits::PaddingScheme, RsaPrivateKey, RsaPublicKey };
 use anyhow::Context;
 use rsa::pkcs8::EncodePublicKey;
 use base64::{ engine::general_purpose, Engine as _ };
+use rsa::Pkcs1v15Encrypt;
 
-use common::commands::{ Command, ClientInfo, File };
+use common::commands::{ ClientInfo, Command, EncryptionRequestData, EncryptionResponseData, File };
 
-fn encryption_request(mut stream: TcpStream, pub_key: Vec<u8>) -> String {
-    let init_msg = "encryption_request||";
-    let mut token = [0u8; common::ENC_TOK_LEN];
-    OsRng.fill(&mut token);
+fn encryption_request(mut stream: TcpStream, pub_key: Vec<u8>) -> EncryptionResponseData {
+    write_buffer(&mut stream, Command::EncryptionRequest(EncryptionRequestData { public_key: pub_key.clone() }), &None);
 
-    let token = general_purpose::STANDARD.encode(token);
-    let pub_key = general_purpose::STANDARD.encode(pub_key);
+    let rcv = read_buffer(&mut stream.try_clone().unwrap(), &None).unwrap();
 
-    let string = init_msg.to_string() + &token + "||" + &pub_key;
+    match rcv {
+        Command::EncryptionResponse(response) => response,
+        _ => panic!("Invalid command received"),
+    
+    }
 
-    let size = string.len() as u32;
-    let size_bytes = size.to_be_bytes();
-
-    stream.write_all(&size_bytes).unwrap();
-    stream.write_all(string.as_bytes()).unwrap();
-
-    token
 }
 
-fn get_client(mut stream: TcpStream) -> ClientInfo {
-    write_buffer(&mut stream, Command::InitClient);
+fn get_client(mut stream: TcpStream, secret: Option<Vec<u8>>) -> ClientInfo {
+    write_buffer(&mut stream, Command::InitClient, &secret);
 
-    let rcv = read_buffer(&mut stream.try_clone().unwrap()).unwrap();
+    let rcv = read_buffer(&mut stream.try_clone().unwrap(), &secret).unwrap();
 
     match rcv {
         Command::Client(client) => client,
@@ -81,6 +76,7 @@ impl Server {
             let vec = Arc::clone(&self.clients);
             let tauri_handle = Arc::clone(&self.tauri_handle);
             let public_key = self.public_key.clone();
+            let private_key = self.private_key.clone();
 
             tokio::task::spawn(async move {
                 for i in stream.incoming() {
@@ -93,13 +89,17 @@ impl Server {
                     let stream = i.unwrap();
                     let ip = stream.try_clone().unwrap().peer_addr().unwrap().ip().to_string();
 
-                    //let encryption_request = encryption_request(stream.try_clone().unwrap(), public_key.to_public_key_der().unwrap().as_ref().to_vec());
+                    let encryption = encryption_request(stream.try_clone().unwrap(), public_key.to_public_key_der().unwrap().as_ref().to_vec());
 
-                    let info = get_client(stream.try_clone().unwrap());
+                    let padding = Pkcs1v15Encrypt::default();
+                    let secret_dec = private_key.decrypt(padding, &encryption.secret).unwrap();
+
+                    let info = get_client(stream.try_clone().unwrap(), Some(secret_dec.clone()));
 
                     let client = client::Client::new(
                         Arc::clone(&tauri_handle),
                         stream.try_clone().unwrap(),
+                        secret_dec,
                         info.username.clone(),
                         info.hostname,
                         info.os,

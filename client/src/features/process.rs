@@ -3,7 +3,7 @@ use sysinfo::{ System, Pid };
 use common::buffers::write_buffer;
 use common::commands::{ ProcessList, Process, Command };
 
-pub fn process_list(write_stream: &mut TcpStream) {
+pub fn process_list(write_stream: &mut TcpStream, secret: &Option<Vec<u8>>) {
     let mut s = System::new_all();
 
     s.refresh_all();
@@ -23,7 +23,7 @@ pub fn process_list(write_stream: &mut TcpStream) {
 
     let process_command = Command::ProcessList(process_list);
 
-    write_buffer(write_stream, process_command);
+    write_buffer(write_stream, process_command, secret);
 }
 
 pub fn kill_process(pid: usize) {

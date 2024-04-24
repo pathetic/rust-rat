@@ -11,6 +11,8 @@ sysinfo = "0.30.10"
 common = { path = "../common" }
 rand = "0.8.5"
 rmp-serde = "1.2.0"
+rand_chacha = "0.3.1"
+rsa = "0.9.6"
 
 [profile.release]
 lto = true

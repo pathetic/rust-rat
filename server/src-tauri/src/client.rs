@@ -11,6 +11,7 @@ pub struct Client {
     tauri_handle: Arc<Mutex<AppHandle>>,
     write_stream: TcpStream,
     read_stream: Arc<Mutex<TcpStream>>,
+    secret: Vec<u8>,
 
     username: String,
     hostname: String,
@@ -38,6 +39,7 @@ impl Client {
     pub fn new(
         tauri_handle: Arc<Mutex<AppHandle>>,
         write_stream: TcpStream,
+        secret: Vec<u8>,
         username: String,
         hostname: String,
         os: String,
@@ -53,6 +55,7 @@ impl Client {
             tauri_handle,
             write_stream: write_stream.try_clone().unwrap(),
             read_stream: Arc::new(Mutex::new(write_stream.try_clone().unwrap())),
+            secret,
             username,
             hostname,
             os,
@@ -71,8 +74,8 @@ impl Client {
         }
     }
 
-    pub fn write_buffer(&mut self, command: Command) {
-        write_buffer(&mut self.write_stream, command)
+    pub fn write_buffer(&mut self, command: Command, secret: &Option<Vec<u8>>) {
+        write_buffer(&mut self.write_stream, command, &secret);
     }
 
     pub fn handle_client(&mut self) {
@@ -82,11 +85,12 @@ impl Client {
         let current_path = Arc::clone(&self.current_path);
         let disconnected = Arc::clone(&self.disconnected);
         let tauri_handle = Arc::clone(&self.tauri_handle);
-
+        let secret = self.get_secret();
+        
         std::thread::spawn(move || {
             loop {
                 let mut locked_stream = stream_clone.lock().unwrap();
-                let received_data = read_buffer(&mut locked_stream);
+                let received_data = read_buffer(&mut locked_stream, &Some(secret.clone()));
 
                 match received_data {
                     Ok(received) => {
@@ -211,5 +215,9 @@ impl Client {
 
     pub fn reset_path(&self) {
         self.current_path.lock().unwrap().clear();
+    }
+
+    pub fn get_secret(&self) -> Vec<u8> {
+        self.secret.clone()
     }
 }

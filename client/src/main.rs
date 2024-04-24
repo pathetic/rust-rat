@@ -12,9 +12,17 @@ pub mod settings;
 use handler::handle_command;
 use common::buffers::read_buffer;
 use rand::{ rngs::OsRng, Rng };
+use rsa::pkcs8::DecodePublicKey;
+use rsa::Pkcs1v15Encrypt;
 use std::process;
 
-use common::commands::Command;
+use common::commands::{Command, EncryptionResponseData};
+use common::buffers::write_buffer;
+
+use rand::{ SeedableRng};
+use rand_chacha::ChaCha20Rng;
+
+use rsa::{RsaPublicKey, RsaPrivateKey, traits::PaddingScheme};
 
 fn handle_server(
     mut read_stream: TcpStream,
@@ -28,8 +36,19 @@ fn handle_server(
     let mut secret = [0u8; common::SECRET_LEN];
     OsRng.fill(&mut secret);
 
+    let mut secret_initalized = false;
+
     loop {
-        let received_command = read_buffer(&mut read_stream);
+        let secret_clone = Some(secret.to_vec());
+        let received_command = read_buffer(
+            &mut read_stream, 
+            if secret_initalized { 
+                &secret_clone
+            } else { 
+                &None
+            }
+        );
+
         match received_command {
             Ok(command) => {
                 let mut handler_name: &str = "";
@@ -39,6 +58,18 @@ fn handle_server(
                 let mut path_storage = String::new();
                 let mut path = "";
                 match command {
+                    Command::EncryptionRequest(data) => {
+                        let padding = Pkcs1v15Encrypt::default();
+                        let public_key = RsaPublicKey::from_public_key_der(&data.public_key).unwrap();
+
+                        let encryption_response = EncryptionResponseData {
+                            secret: public_key.encrypt(&mut ChaCha20Rng::from_seed(secret), padding, &secret).unwrap()
+                        };
+
+                        secret_initalized = true;
+
+                        write_buffer(&mut write_stream, Command::EncryptionResponse(encryption_response), &None);
+                    }
                     Command::InitClient => {
                         handler_name = "INIT_CLIENT";
                     }
@@ -126,7 +157,8 @@ fn handle_server(
                         command_data,
                         path,
                         &mut remote_shell,
-                        &mut current_path
+                        &mut current_path,
+                        &Some(secret.to_vec())
                     );
                 }
             }

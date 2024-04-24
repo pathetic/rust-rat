@@ -2,6 +2,9 @@ use serde::{ Serialize, Deserialize };
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
+    EncryptionRequest(EncryptionRequestData),
+    EncryptionResponse(EncryptionResponseData),
+
     InitClient,
     Client(ClientInfo),
 
@@ -69,4 +72,14 @@ pub struct File {
 pub struct FileData {
     pub name: String,
     pub data: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EncryptionRequestData {
+    pub public_key: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct EncryptionResponseData {
+    pub secret: Vec<u8>,
 }

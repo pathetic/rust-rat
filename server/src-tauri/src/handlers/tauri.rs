@@ -119,13 +119,13 @@ pub fn read_files(
 
     match run {
         "previous_dir" => {
-            client.write_buffer(Command::PreviousDir);
+            client.write_buffer(Command::PreviousDir, &Some(client.get_secret()));
         }
         "available_disks" => {
-            client.write_buffer(Command::AvailableDisks);
+            client.write_buffer(Command::AvailableDisks, &Some(client.get_secret()));
         }
         "view_dir" => {
-            client.write_buffer(Command::ViewDir(path.to_string()));
+            client.write_buffer(Command::ViewDir(path.to_string()), &Some(client.get_secret()));
         }
         _ => {
             return ("".to_string(), vec![]);
@@ -153,13 +153,13 @@ pub fn manage_file(
 
     match run {
         "download_file" => {
-            client.write_buffer(Command::DownloadFile(file.to_string()));
+            client.write_buffer(Command::DownloadFile(file.to_string()), &Some(client.get_secret()));
         }
         "remove_file" => {
-            client.write_buffer(Command::RemoveFile(file.to_string()));
+            client.write_buffer(Command::RemoveFile(file.to_string()), &Some(client.get_secret()));
         }
         "remove_dir" => {
-            client.write_buffer(Command::RemoveDir(file.to_string()));
+            client.write_buffer(Command::RemoveDir(file.to_string()), &Some(client.get_secret()));
         }
         _ => {
             return "false".to_string();
@@ -178,7 +178,7 @@ pub fn take_screenshot(id: &str, display: i32, server_state: State<'_, SharedSer
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write_buffer(Command::ScreenshotDisplay(display.to_string()));
+    client.write_buffer(Command::ScreenshotDisplay(display.to_string()), &Some(client.get_secret()));
 }
 
 #[tauri::command]
@@ -190,7 +190,7 @@ pub fn handle_system_command(id: &str, run: &str, server_state: State<'_, Shared
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write_buffer(Command::ManageSystem(run.to_string()));
+    client.write_buffer(Command::ManageSystem(run.to_string()), &Some(client.get_secret()));
 
     "true".to_string()
 }
@@ -209,7 +209,7 @@ pub fn manage_shell(id: &str, run: &str, server_state: State<'_, SharedServer>) 
             return "true".to_string();
         }
         client.shell_started = true;
-        client.write_buffer(Command::StartShell);
+        client.write_buffer(Command::StartShell, &Some(client.get_secret()));
         return "true".to_string();
     }
 
@@ -218,7 +218,7 @@ pub fn manage_shell(id: &str, run: &str, server_state: State<'_, SharedServer>) 
             return "false".to_string();
         }
         client.shell_started = false;
-        client.write_buffer(Command::ExitShell);
+        client.write_buffer(Command::ExitShell, &Some(client.get_secret()));
         return "false".to_string();
     }
 
@@ -244,7 +244,7 @@ pub fn execute_shell_command(id: &str, run: &str, server_state: State<'_, Shared
     let client = clients.get_mut(client_id).unwrap();
 
     if client.shell_started {
-        client.write_buffer(Command::ShellCommand(run.to_string()));
+        client.write_buffer(Command::ShellCommand(run.to_string()), &Some(client.get_secret()));
     }
 }
 
@@ -257,7 +257,7 @@ pub fn process_list(id: &str, server_state: State<'_, SharedServer>) {
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write_buffer(Command::GetProcessList);
+    client.write_buffer(Command::GetProcessList, &Some(client.get_secret()));
 }
 
 #[tauri::command]
@@ -274,7 +274,7 @@ pub fn kill_process(
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write_buffer(Command::KillProcess(Process { pid, name: name.to_string() }));
+    client.write_buffer(Command::KillProcess(Process {pid, name: name.to_string()}), &Some(client.get_secret()));
 
     "true".to_string()
 }
