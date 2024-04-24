@@ -278,3 +278,29 @@ pub fn kill_process(
 
     "true".to_string()
 }
+
+#[tauri::command]
+pub fn manage_client(
+    id: &str,
+    run: &str,
+    server_state: State<'_, SharedServer>
+) {
+    println!("doing sometihing");
+    let server = server_state.0.lock().unwrap();
+
+    let client_id = id.parse::<usize>().unwrap();
+
+    let mut clients = server.clients.lock().unwrap();
+    let client = clients.get_mut(client_id).unwrap();
+
+    match run {
+        "disconnect" => {
+            client.write_buffer(Command::Disconnect, &Some(client.get_secret()));
+        }
+        "reconnect" => {
+            client.write_buffer(Command::Reconnect, &Some(client.get_secret()));
+        }
+        _ => {
+        }
+    }
+}

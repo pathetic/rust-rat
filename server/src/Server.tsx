@@ -1,8 +1,8 @@
 import { useContext } from "react";
-import { invoke } from "@tauri-apps/api/tauri";
 import { useNavigate } from "react-router-dom";
 import toast from "react-hot-toast";
 import { RATContext } from "./rat/RATContext";
+import { startServerCmd } from "./rat/RATCommands";
 
 export const Server: React.FC = () => {
   const { port, setPort, setRunning } = useContext(RATContext)!;
@@ -10,7 +10,7 @@ export const Server: React.FC = () => {
   const navigate = useNavigate();
 
   async function startServer() {
-    let serverMessage = await invoke("start_server", { port });
+    let serverMessage = await startServerCmd(port);
 
     if (serverMessage === "true") {
       toast.success("Server started successfully!", {

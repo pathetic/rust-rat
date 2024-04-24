@@ -58,6 +58,8 @@ export type MenuOptionType = {
   navigate?: boolean;
   path?: string;
   options?: MenuOptionType[];
+  run?: string;
+  function?: (string, string) => void;
 };
 
 interface SubMenuProps {

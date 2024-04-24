@@ -1,6 +1,6 @@
-import { invoke } from "@tauri-apps/api/tauri";
 import { listen, UnlistenFn } from "@tauri-apps/api/event";
 import { ShellCommandType } from "../../types";
+import { executeShellCommandCmd } from "../rat/RATCommands";
 
 export const getOutput = async (
   command: string,
@@ -41,7 +41,7 @@ export const getOutput = async (
             unlisten = unlistenFn;
           });
 
-          invoke("execute_shell_command", { id, run: command }).then(() => {
+          executeShellCommandCmd(id, command).then(() => {
             timer = setTimeout(() => {
               resolve(<div style={{ whiteSpace: "pre-wrap" }}>{output}</div>);
               if (unlisten) unlisten();

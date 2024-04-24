@@ -12,71 +12,48 @@ use chacha20poly1305::{
 };
 
 pub fn read_buffer(stream: &mut TcpStream, secret: &Option<Vec<u8>>) -> Result<Command, Box<dyn std::error::Error>> {
+    let mut size_buf = [0_u8; 4];
+    stream.read_exact(&mut size_buf)?;
+
+    let size = u32::from_be_bytes(size_buf) as usize;
+
+    let mut data_buf = vec![0u8; size];
+    stream.read_exact(&mut data_buf)?;
+
     match secret {
         Some(secret) => {
-            let mut size_buf = [0_u8; 4];
-            stream.read_exact(&mut size_buf)?;
-
-            let size = u32::from_be_bytes(size_buf) as usize;
-
-            let mut data_buf = vec![0u8; size];
-            stream.read_exact(&mut data_buf)?;
-
             let slice = secret.as_slice();
             let secret_u832: Result<&[u8; 32], _> = slice.try_into();
 
-            let buffer = decrypt_buffer(&data_buf, secret_u832.unwrap(), &[0; 24]);
-
-            let packet: Packet = rmp_serde::from_slice(&buffer)?;
-
-            println!("packet command: {:?}", packet.command);
-
-            Ok(packet.command)
+            data_buf = decrypt_buffer(&data_buf, secret_u832.unwrap(), &[0; 24]);
         },
         None => {
-            let mut size_buf = [0_u8; 4];
-            stream.read_exact(&mut size_buf)?;
-        
-            let size = u32::from_be_bytes(size_buf) as usize;
-        
-            let mut data_buf = vec![0u8; size];
-            stream.read_exact(&mut data_buf)?;
-        
-            let packet: Packet = rmp_serde::from_slice(&data_buf)?;
-        
-            println!("packet command: {:?}", packet.command);
-            println!("packet test data: {}", packet.test_data);
-        
-            Ok(packet.command)
         }
     }
+
+    let packet: Packet = rmp_serde::from_slice(&data_buf)?;
+
+
+    Ok(packet.command)
 }
 
 pub fn write_buffer(stream: &mut TcpStream, command: Command, secret: &Option<Vec<u8>>) {
+    let mut buffer: Vec<u8> = Vec::new();
+
+    let packet = Packet { command, test_data: "test".to_string() };
+
+    packet.serialize(&mut Serializer::new(&mut buffer)).unwrap();
+
     match secret {
         Some(secret) => {
-            let mut buf = Vec::new();
-
-            let packet = Packet { command, test_data: "test".to_string() };
-        
-            packet.serialize(&mut Serializer::new(&mut buf)).unwrap();vec_to_array32(secret).unwrap();
-
-            let buffer = encrypt_buffer(&buf, vec_to_array32(secret).unwrap(), &[0; 24]);
-
-            let _ = stream.write_all(&(buffer.len() as u32).to_be_bytes());
-            let _ = stream.write_all(&buffer);
+            buffer = encrypt_buffer(&buffer, vec_to_array32(secret).unwrap(), &[0; 24]);
         },
         None => {
-            let mut buf = Vec::new();
-
-            let packet = Packet { command, test_data: "test".to_string() };
-        
-            packet.serialize(&mut Serializer::new(&mut buf)).unwrap();
-        
-            let _ = stream.write_all(&(buf.len() as u32).to_be_bytes());
-            let _ = stream.write_all(&buf);
         }
     }
+
+    let _ = stream.write_all(&(buffer.len() as u32).to_be_bytes());
+    let _ = stream.write_all(&buffer);
 
 }
 

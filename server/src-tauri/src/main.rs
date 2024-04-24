@@ -20,6 +20,7 @@ use handlers::{
         take_screenshot,
         process_list,
         kill_process,
+        manage_client
     },
     SharedTauriState,
     SharedServer,
@@ -52,7 +53,8 @@ async fn main() {
                 manage_shell,
                 execute_shell_command,
                 process_list,
-                kill_process
+                kill_process,
+                manage_client
             ]
         )
         .run(tauri::generate_context!())

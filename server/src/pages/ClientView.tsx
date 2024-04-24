@@ -1,8 +1,12 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
-import { invoke } from "@tauri-apps/api/tauri";
 import { listen } from "@tauri-apps/api/event";
 import { RATClient } from "../../types";
+import {
+  fetchClientCmd,
+  takeScreenshotCmd,
+  handleSystemCommandCmd,
+} from "../rat/RATCommands";
 
 export const ClientView: React.FC = () => {
   const { id } = useParams();
@@ -13,7 +17,7 @@ export const ClientView: React.FC = () => {
   const navigate = useNavigate();
 
   async function fetchClient() {
-    let ok: RATClient = await invoke("fetch_client", { id });
+    let ok: RATClient = await fetchClientCmd(id);
     setClient(ok);
     setLoaded(true);
   }
@@ -25,14 +29,11 @@ export const ClientView: React.FC = () => {
   }
 
   async function takeScreenshot(display: number) {
-    await invoke("take_screenshot", {
-      id,
-      display: display,
-    });
+    await takeScreenshotCmd(id, display);
   }
 
   async function handleSystem(cmd: string) {
-    await invoke("handle_system_command", { id, run: cmd });
+    await handleSystemCommandCmd(id, cmd);
   }
 
   useEffect(() => {
