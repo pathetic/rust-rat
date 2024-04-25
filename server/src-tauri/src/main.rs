@@ -8,6 +8,7 @@ mod handlers;
 
 use handlers::{
     tauri::{
+        build_client,
         execute_shell_command,
         fetch_client,
         fetch_state,
@@ -44,6 +45,7 @@ async fn main() {
             tauri::generate_handler![
                 start_server,
                 fetch_state,
+                build_client,
                 fetch_clients,
                 fetch_client,
                 read_files,

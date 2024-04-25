@@ -9,8 +9,8 @@ use winapi::um::handleapi::CloseHandle;
 use std::process::exit;
 use winapi::shared::winerror::ERROR_ALREADY_EXISTS;
 
-pub fn mutex_lock() {
-    let mutex_value = format!("Local\\{}", crate::settings::MUTEX);
+pub fn mutex_lock(mutex: &str) {
+    let mutex_value = format!("Local\\{}", mutex);
     let mutex = OsStr::new(&mutex_value).encode_wide().chain(Some(0)).collect::<Vec<u16>>();
 
     unsafe {
@@ -25,7 +25,5 @@ pub fn mutex_lock() {
             CloseHandle(mutex_handle);
             exit(0);
         }
-
-        CloseHandle(mutex_handle);
     }
 }
