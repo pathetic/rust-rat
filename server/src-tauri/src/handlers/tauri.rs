@@ -2,9 +2,8 @@ use tauri::State;
 use crate::handlers::{ SharedServer, SharedTauriState, FrontClient, TauriState };
 use common::commands::{ Command, File as FileData, Process };
 
-use serde::{ Serialize, Deserialize };
+use serde::Serialize;
 use object::{Object, ObjectSection};
-use std::error::Error;
 use std::fs::{self, File};
 use std::io::Write;
 use std::vec;
@@ -154,7 +153,7 @@ pub fn read_files(
     path: &str,
     server_state: State<'_, SharedServer>
 ) -> (String, Vec<FileData>) {
-    let mut server = server_state.0.lock().unwrap();
+    let server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
 

@@ -12,7 +12,6 @@ pub mod features;
 pub mod handler;
 pub mod service;
 
-use features::tray_icon;
 use handler::handle_command;
 use common::{buffers::read_buffer, ClientConfig};
 use rand::{ rngs::OsRng, Rng };

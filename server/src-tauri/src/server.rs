@@ -1,4 +1,3 @@
-use std::io::Write;
 use std::net::{ TcpListener, TcpStream };
 use std::sync::{ Arc, Mutex };
 use tauri::{ AppHandle, Manager };
@@ -7,17 +6,12 @@ use crate::client;
 use common::buffers::{ read_buffer, write_buffer };
 
 use rand::rngs::OsRng;
-use rand::Rng;
-use rand::RngCore;
-use rand::SeedableRng;
-use rand_chacha::ChaCha20Rng;
-use rsa::{ traits::PaddingScheme, RsaPrivateKey, RsaPublicKey };
+use rsa::{ RsaPrivateKey, RsaPublicKey };
 use anyhow::Context;
 use rsa::pkcs8::EncodePublicKey;
-use base64::{ engine::general_purpose, Engine as _ };
 use rsa::Pkcs1v15Encrypt;
 
-use common::commands::{ ClientInfo, Command, EncryptionRequestData, EncryptionResponseData, File };
+use common::commands::{ ClientInfo, Command, EncryptionRequestData, EncryptionResponseData };
 
 fn encryption_request(mut stream: TcpStream, pub_key: Vec<u8>) -> EncryptionResponseData {
     write_buffer(&mut stream, Command::EncryptionRequest(EncryptionRequestData { public_key: pub_key.clone() }), &None);

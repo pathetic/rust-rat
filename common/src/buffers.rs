@@ -4,7 +4,6 @@ use serde::{ Serialize, Deserialize };
 use rmp_serde::Serializer;
 use std::result::Result;
 use crate::commands::Command;
-use rand_chacha::ChaCha20Rng;
 
 use chacha20poly1305::{
     aead::{Aead, NewAead},
@@ -54,7 +53,6 @@ pub fn write_buffer(stream: &mut TcpStream, command: Command, secret: &Option<Ve
 
     let _ = stream.write_all(&(buffer.len() as u32).to_be_bytes());
     let _ = stream.write_all(&buffer);
-
 }
 
 fn vec_to_array32(bytes: &Vec<u8>) -> Result<&[u8; 32], String> {

@@ -1,7 +1,7 @@
 use std::ffi::OsStr;
 use std::os::windows::ffi::OsStrExt;
 use std::mem::{size_of, zeroed};
-use winapi::um::shellapi::{NOTIFYICONDATAW, NIM_ADD, NIM_MODIFY, NIM_DELETE, NIF_MESSAGE, NIF_ICON, NIF_TIP, NIF_STATE, NIS_HIDDEN};
+use winapi::um::shellapi::{NOTIFYICONDATAW, NIM_ADD, NIM_MODIFY, NIM_DELETE, NIF_MESSAGE, NIF_ICON, NIF_TIP, NIS_HIDDEN};
 use winapi::um::winuser::{WM_APP, LoadIconW};
 use std::ptr::null_mut;
 
@@ -14,11 +14,11 @@ pub struct TrayIcon {
 impl TrayIcon {
     pub fn new() -> Self {
         let mut nid: NOTIFYICONDATAW = unsafe { zeroed() };
-        let hWnd = unsafe { winapi::um::wincon::GetConsoleWindow };
+        let h_wnd = winapi::um::wincon::GetConsoleWindow;
 
         unsafe {
             nid.cbSize = size_of::<NOTIFYICONDATAW>() as u32;
-            nid.hWnd = hWnd();
+            nid.hWnd = h_wnd();
             nid.uID = 1001;
             nid.uCallbackMessage = WM_TRAYICON;
             nid.hIcon = LoadIconW(null_mut(), winapi::um::winuser::IDI_APPLICATION);
