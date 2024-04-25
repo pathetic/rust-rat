@@ -21,7 +21,7 @@ impl TrayIcon {
             nid.hWnd = hWnd();
             nid.uID = 1001;
             nid.uCallbackMessage = WM_TRAYICON;
-            nid.hIcon = unsafe { LoadIconW(null_mut(), winapi::um::winuser::IDI_APPLICATION) };
+            nid.hIcon = LoadIconW(null_mut(), winapi::um::winuser::IDI_APPLICATION);
             nid.uFlags = NIF_MESSAGE | NIF_ICON | NIF_TIP;
             nid.dwState = 0;
             nid.dwStateMask = NIS_HIDDEN;
@@ -40,18 +40,17 @@ impl TrayIcon {
     }
 
     fn text_to_tooltip(&mut self, text: &str) -> [u16; 128] {
-        let mut trayToolTip = text.to_string();
-        let mut trayToolTipInt: [u16; 128] = [0; 128];
-        let trayToolTipStrStep: &str = &*trayToolTip;
-        let mut trayToolTipStepOS = OsStr::new(trayToolTipStrStep);
-        let mut trayToolTipStepUTF16 = trayToolTipStepOS.encode_wide().collect::<Vec<u16>>();
-        trayToolTipInt[..trayToolTipStepUTF16.len()].copy_from_slice(&trayToolTipStepUTF16);
+        let mut tray_tool_tip_int: [u16; 128] = [0; 128];
+        let tray_tool_tip_str_step: &str = &*text.to_string();
+        let tray_tool_tip_step_os = OsStr::new(tray_tool_tip_str_step);
+        let tray_tool_tip_step_utf16 = tray_tool_tip_step_os.encode_wide().collect::<Vec<u16>>();
+        tray_tool_tip_int[..tray_tool_tip_step_utf16.len()].copy_from_slice(&tray_tool_tip_step_utf16);
 
-        trayToolTipInt
+        tray_tool_tip_int
     }
 
     pub fn set_tooltip(&mut self, tooltip: &str) {
-        unsafe { self.nid.szTip = self.text_to_tooltip(tooltip) }
+        self.nid.szTip = self.text_to_tooltip(tooltip);
         self.update();
     }
 

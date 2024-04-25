@@ -6,7 +6,6 @@ edition = "2021"
 [dependencies]
 winapi = { version = "0.3.9", features = ["synchapi", "errhandlingapi", "dxgi1_2", "winerror", "wingdi", "winuser", "securitybaseapi", "winuser","wincon","shellapi"] }
 screenshots = "0.8.10"
-base64 = "0.22.0"
 sysinfo = "0.30.10"
 common = { path = "../common" }
 rand = "0.8.5"
