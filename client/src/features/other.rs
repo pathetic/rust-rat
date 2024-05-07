@@ -140,15 +140,11 @@ pub fn visit_website(
 }
 
 pub fn elevate_client() {
-    let mut mutex_lock_guard = crate::MUTEX_LOCK.lock().unwrap();
-
-    println!("{:?}", is_elevated());
-
     if is_elevated() {
         return;
     }
 
-    mutex_lock_guard.unlock();
+    crate::MUTEX_SERVICE.lock().unwrap().unlock();
 
     let exe = std::env::current_exe().unwrap();
     let path = exe.to_str().unwrap();
@@ -171,7 +167,7 @@ pub fn elevate_client() {
         if (h_instance as UINT) > 32 {
             std::process::exit(1);
         } else {
-            mutex_lock_guard.lock();
+            crate::MUTEX_SERVICE.lock().unwrap().lock();
         }
     }
 }

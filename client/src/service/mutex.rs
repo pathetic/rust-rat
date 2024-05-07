@@ -31,12 +31,16 @@ impl MutexLock {
     pub fn init(&mut self, mutex_enabled: bool, mutex_value: String) {
         self.mutex_enabled = mutex_enabled;
         self.mutex_value = mutex_value;
+
+        self.lock();
     }
 
     pub fn lock(&mut self) {
         if !self.mutex_enabled {
             return;
         }
+
+        println!("locking");
 
         let mutex = OsStr::new(&format!("Local\\{}", &self.mutex_value))
             .encode_wide()
