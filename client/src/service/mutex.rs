@@ -9,21 +9,66 @@ use winapi::um::handleapi::CloseHandle;
 use std::process::exit;
 use winapi::shared::winerror::ERROR_ALREADY_EXISTS;
 
-pub fn mutex_lock(mutex: &str) {
-    let mutex_value = format!("Local\\{}", mutex);
-    let mutex = OsStr::new(&mutex_value).encode_wide().chain(Some(0)).collect::<Vec<u16>>();
+use winapi::shared::ntdef::HANDLE;
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
 
-    unsafe {
-        let mutex_handle = CreateMutexW(ptr::null_mut(), 1, mutex.as_ptr());
+pub struct MutexLock {
+    handle: HANDLE,
+    mutex_enabled: bool,
+    mutex_value: String,
+}
 
-        if mutex_handle.is_null() {
-            exit(0);
+impl MutexLock {
+    pub fn new() -> Self {
+        MutexLock {
+            handle: ptr::null_mut(),
+            mutex_enabled: false,
+            mutex_value: String::new(),
+        }
+    }
+
+    pub fn init(&mut self, mutex_enabled: bool, mutex_value: String) {
+        self.mutex_enabled = mutex_enabled;
+        self.mutex_value = mutex_value;
+    }
+
+    pub fn lock(&mut self) {
+        if !self.mutex_enabled {
+            return;
         }
 
-        let last_error = GetLastError();
-        if last_error == ERROR_ALREADY_EXISTS {
-            CloseHandle(mutex_handle);
-            exit(0);
+        let mutex = OsStr::new(&format!("Local\\{}", &self.mutex_value))
+            .encode_wide()
+            .chain(Some(0))
+            .collect::<Vec<u16>>();
+
+        unsafe {
+            let mutex_handle = CreateMutexW(ptr::null_mut(), 1, mutex.as_ptr());
+
+            if mutex_handle.is_null() {
+                exit(0);
+            }
+
+            self.handle = mutex_handle;
+
+            let last_error = GetLastError();
+            if last_error == ERROR_ALREADY_EXISTS {
+                CloseHandle(mutex_handle);
+                exit(0);
+            }
+        }
+    }
+
+    pub fn unlock(&mut self) {
+        if !self.mutex_enabled {
+            return;
+        }
+
+        unsafe {
+            CloseHandle(self.handle);
         }
     }
 }
+
+unsafe impl Send for MutexLock {}

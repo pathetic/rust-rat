@@ -2,7 +2,7 @@ import React, { useContext, useEffect, useState, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { RATContext } from "../rat/RATContext";
 import { ContextMenuProps, SubMenuProps } from "../../types";
-import { manageClientCmd, handleSystemCommandCmd } from "../rat/RATCommands";
+import { manageClientCmd, handleSystemCommandCmd, handleElevateCmd } from "../rat/RATCommands";
 
 const menuOptions = [
   {
@@ -33,6 +33,18 @@ const menuOptions = [
         navigate: true,
         path: "/clients/[ID]/process",
       },
+      {
+        label: "Visit Website",
+        icon: <i className="ri-global-line ri-2x text-primary"></i>,
+        navigate: false,
+        modal: true,
+        modalId: "visit_website_modal",
+      },
+      {
+        label: "Elevate Privileges (UAC)",
+        icon: <i className="ri-shield-line ri-2x text-warning"></i>,
+        function: handleElevateCmd,
+      }
     ],
     navigate: false,
   },
@@ -74,7 +86,7 @@ const menuOptions = [
       {
         label: "Disconnect",
         icon: <i className="ri-pentagon-line ri-2x text-error"></i>,
-        run: "reconnect",
+        run: "disconnect",
         function: manageClientCmd,
       },
     ],
@@ -98,7 +110,7 @@ const SubMenu: React.FC<SubMenuProps> = ({
         <div
           key={index}
           onClick={() => {
-            if (item.navigate && typeof item.path === "string") {
+              if (item.navigate && typeof item.path === "string") {
               navigate(item.path.replace("[ID]", id));
             }
             if (
@@ -106,6 +118,12 @@ const SubMenu: React.FC<SubMenuProps> = ({
               typeof item.run === "string"
             ) {
               item.function(String(id), item.run);
+            }
+            if (item.modal && typeof item.modalId === "string") {
+              (document.getElementById(item.modalId) as HTMLDialogElement)?.showModal();
+            }
+            if ( typeof item.function == "function" && typeof item.run === "undefined") {
+              item.function(String(id));
             }
             onClose();
           }}

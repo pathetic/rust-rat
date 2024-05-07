@@ -59,7 +59,9 @@ export type MenuOptionType = {
   path?: string;
   options?: MenuOptionType[];
   run?: string;
-  function?: (string, string) => void;
+  function?: (string?, string?) => void;
+  modal?: boolean;
+  modalId?: string;
 };
 
 interface SubMenuProps {

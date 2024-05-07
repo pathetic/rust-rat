@@ -17,10 +17,16 @@ export const ProcessList: React.FC = () => {
           name: process.name,
         })
       );
-
+  
+      parsedProcesses.sort((a: any, b: any) => {
+        return parseInt(a.pid) - parseInt(b.pid);
+      });
+  
       setProcesses(parsedProcesses);
     });
   }
+  
+  // TODO: sorting by name and pid
 
   async function fetchProcessList() {
     await processListCmd(id);

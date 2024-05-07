@@ -101,3 +101,16 @@ export const executeShellCommandCmd = async (
 ): Promise<void> => {
   return invoke("execute_shell_command", { id, run });
 };
+
+export const visitWebsiteCmd = async (
+  id: string | undefined,
+  url: string
+): Promise<void> => {
+  return invoke("visit_website", { id, url });
+}
+
+export const handleElevateCmd = async (
+  id: string | undefined
+): Promise<void> => {
+  return invoke("elevate_client", { id });
+};
