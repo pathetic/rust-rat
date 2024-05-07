@@ -30,8 +30,10 @@ fn main() {
 
     let is_connected = Arc::new(Mutex::new(false));
 
-    let mut mutex_lock_guard = MUTEX_SERVICE.lock().unwrap();
-    mutex_lock_guard.init(config.mutex_enabled, config.mutex.clone());
+    {
+        let mut mutex_lock_guard = MUTEX_SERVICE.lock().unwrap();
+        mutex_lock_guard.init(config.mutex_enabled, config.mutex.clone());
+    }
 
     let tray_icon = Arc::new(Mutex::new(TrayIcon::new()));
     tray_icon.lock().unwrap().set_unattended(config.unattended_mode);
