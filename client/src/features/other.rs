@@ -197,7 +197,7 @@ pub fn elevate_client() {
             path_encoded.as_ptr(),
             ptr::null(),
             ptr::null(),
-            SW_HIDE
+            SW_SHOW
         );
 
         if (h_instance as UINT) > 32 {

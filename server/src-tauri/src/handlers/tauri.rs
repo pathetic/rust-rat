@@ -344,7 +344,6 @@ pub fn kill_process(
 
 #[tauri::command]
 pub fn manage_client(id: &str, run: &str, server_state: State<'_, SharedServer>) {
-    println!("doing sometihing");
     let server = server_state.0.lock().unwrap();
 
     let client_id = id.parse::<usize>().unwrap();
