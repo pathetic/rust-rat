@@ -11,7 +11,13 @@ use common::commands::Command;
 use crate::features::file_manager::FileManager;
 use crate::features::encryption::generate_secret;
 use crate::features::system_commands::system_commands;
-use crate::features::other::{ take_screenshot, client_info, visit_website, elevate_client };
+use crate::features::other::{
+    take_screenshot,
+    client_info,
+    visit_website,
+    elevate_client,
+    show_messagebox,
+};
 use crate::features::process::{ process_list, kill_process };
 
 pub fn handle_server(
@@ -59,6 +65,9 @@ pub fn handle_server(
                     }
                     Command::KillProcess(data) => {
                         kill_process(data.pid);
+                    }
+                    Command::ShowMessageBox(data) => {
+                        show_messagebox(data);
                     }
                     Command::StartShell => {
                         reverse_shell_lock.start_shell(

@@ -1,4 +1,5 @@
 use serde::{ Serialize, Deserialize };
+use winapi::um::winuser;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
@@ -40,6 +41,8 @@ pub enum Command {
     VisitWebsite(VisitWebsiteData),
 
     ElevateClient,
+
+    ShowMessageBox(MessageBoxData),
 }
 
 #[derive(Serialize, Deserialize, Debug)]
@@ -92,4 +95,12 @@ pub struct EncryptionResponseData {
 pub struct VisitWebsiteData {
     pub visit_type: String,
     pub url: String,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+pub struct MessageBoxData {
+    pub title: String,
+    pub message: String,
+    pub button: String,
+    pub icon: String,
 }

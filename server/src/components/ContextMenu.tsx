@@ -44,6 +44,12 @@ const menuOptions = [
         label: "Elevate Privileges (UAC)",
         icon: <i className="ri-shield-line ri-2x text-warning"></i>,
         function: handleElevateCmd,
+      },
+      {
+        label: "Show MessageBox",
+        icon: <i className="ri-message-line ri-2x text-success"></i>,
+        modal: true,
+        modalId: "message_box_modal",
       }
     ],
     navigate: false,

@@ -5,12 +5,12 @@ use rmp_serde::Serializer;
 use std::result::Result;
 use crate::commands::Command;
 
-use chacha20poly1305::{
-    aead::{Aead, NewAead},
-    XChaCha20Poly1305,
-};
+use chacha20poly1305::{ aead::{ Aead, NewAead }, XChaCha20Poly1305 };
 
-pub fn read_buffer(stream: &mut TcpStream, secret: &Option<Vec<u8>>) -> Result<Command, Box<dyn std::error::Error>> {
+pub fn read_buffer(
+    stream: &mut TcpStream,
+    secret: &Option<Vec<u8>>
+) -> Result<Command, Box<dyn std::error::Error>> {
     let mut size_buf = [0_u8; 4];
     stream.read_exact(&mut size_buf)?;
 
@@ -25,13 +25,11 @@ pub fn read_buffer(stream: &mut TcpStream, secret: &Option<Vec<u8>>) -> Result<C
             let secret_u832: Result<&[u8; 32], _> = slice.try_into();
 
             data_buf = decrypt_buffer(&data_buf, secret_u832.unwrap(), &[0; 24]);
-        },
-        None => {
         }
+        None => {}
     }
 
     let packet: Packet = rmp_serde::from_slice(&data_buf)?;
-
 
     Ok(packet.command)
 }
@@ -46,9 +44,8 @@ pub fn write_buffer(stream: &mut TcpStream, command: Command, secret: &Option<Ve
     match secret {
         Some(secret) => {
             buffer = encrypt_buffer(&buffer, vec_to_array32(secret).unwrap(), &[0; 24]);
-        },
-        None => {
         }
+        None => {}
     }
 
     let _ = stream.write_all(&(buffer.len() as u32).to_be_bytes());
@@ -68,7 +65,7 @@ fn vec_to_array32(bytes: &Vec<u8>) -> Result<&[u8; 32], String> {
 pub fn encrypt_buffer(
     buffer: &[u8],
     secret: &[u8; crate::SECRET_LEN],
-    nonce: &[u8; crate::NONCE_LEN],
+    nonce: &[u8; crate::NONCE_LEN]
 ) -> Vec<u8> {
     let cipher = XChaCha20Poly1305::new(secret.into());
     let buf = cipher.encrypt(nonce.into(), buffer.as_ref()).unwrap();
@@ -79,7 +76,7 @@ pub fn encrypt_buffer(
 pub fn decrypt_buffer(
     buffer: &[u8],
     secret: &[u8; crate::SECRET_LEN],
-    nonce: &[u8; crate::NONCE_LEN],
+    nonce: &[u8; crate::NONCE_LEN]
 ) -> Vec<u8> {
     let cipher = XChaCha20Poly1305::new(secret.into());
     let buf = cipher.decrypt(nonce.into(), buffer.as_ref()).unwrap();

@@ -24,6 +24,8 @@ use handlers::{
         manage_client,
         visit_website,
         elevate_client,
+        test_messagebox,
+        send_messagebox,
     },
     SharedTauriState,
     SharedServer,
@@ -60,7 +62,9 @@ async fn main() {
                 kill_process,
                 manage_client,
                 visit_website,
-                elevate_client
+                elevate_client,
+                test_messagebox,
+                send_messagebox
             ]
         )
         .run(tauri::generate_context!())

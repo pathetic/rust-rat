@@ -20,6 +20,7 @@ rand_chacha = "0.3.1"
 anyhow = "1.0.82"
 rmp-serde = "1.2.0"
 object = "0.35.0"
+winapi = { version = "0.3.9", features = [ "winuser" ] }
 
 [features]
 custom-protocol = ["tauri/custom-protocol"]

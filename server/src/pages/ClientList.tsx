@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useContext } from "react";
 import { RATContext } from "../rat/RATContext";
 import { ContextMenu } from "../components/ContextMenu";
-import { visitWebsiteCmd } from "../rat/RATCommands";
+import { visitWebsiteCmd, testMessageBoxCmd, sendMessageBoxCmd } from "../rat/RATCommands";
 
 import { ContextMenuType } from "../../types";
 
@@ -14,6 +14,11 @@ export const Clients: React.FC = () => {
   const [contextMenu, setContextMenu] = useState<ContextMenuType | null>(null);
 
   const [url , setUrl] = useState<string>("");
+
+  const [messageBoxTitle, setMessageBoxTitle] = useState<string>("");
+  const [messageBoxContent, setMessageBoxContent] = useState<string>("");
+  const [messageBoxButton, setMessageBoxButton] = useState<string>("abort_retry_ignore");
+  const [messageBoxIcon, setMessageBoxIcon] = useState<string>("error");
 
   const handleContextMenu = (
     event: React.MouseEvent<HTMLDivElement, MouseEvent>,
@@ -35,6 +40,9 @@ export const Clients: React.FC = () => {
     (document.getElementById("visit_website_modal") as HTMLDialogElement).close();
     setSelectedClient("");
     setUrl("");
+  }
+
+  const handleMessageBox = () => {
   }
 
   const handleClose = () => {
@@ -72,6 +80,66 @@ export const Clients: React.FC = () => {
 
   return (
     <>
+      <dialog id="message_box_modal" className="modal">
+        <div className="modal-box">
+          <h3 className="font-bold text-lg">Show MessageBox</h3>
+
+          <div className="form-control mt-6">
+            <label className="input input-bordered flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Title"
+                className="grow"
+                value={messageBoxTitle}
+                onChange={(e) => setMessageBoxTitle(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <div className="form-control mt-6">
+            <label className="input input-bordered flex items-center gap-2">
+              <input
+                type="text"
+                placeholder="Content"
+                className="grow"
+                value={messageBoxContent}
+                onChange={(e) => setMessageBoxContent(e.target.value)}
+              />
+            </label>
+          </div>
+
+          <div className="form-control mt-6">
+             <select className="select select-bordered" value={messageBoxButton} onChange={(e) => setMessageBoxButton(e.target.value)}>
+                <option value="abort_retry_ignore">AbortRetryIgnore</option>
+                <option value="ok">OK</option>
+                <option value="ok_cancel">OKCancel</option>
+                <option value="retry_cnacel">RetryCancel</option>
+                <option value="yes_no">YesNo</option>
+                <option value="yes_no_cancel">YesNoCancel</option>
+              </select>
+          </div>
+
+          <div className="form-control mt-6">
+             <select className="select select-bordered" value={messageBoxIcon} onChange={(e) => setMessageBoxIcon(e.target.value)}>
+                <option value="error">Error</option>
+                <option value="question">Question</option>
+                <option value="warning">Warning</option>
+                <option value="info">Information</option>
+                <option value="asterisk">Asterisk</option>
+              </select>
+          </div>
+
+          <div className="modal-action">
+            <span onClick={() => testMessageBoxCmd(messageBoxTitle, messageBoxContent, messageBoxButton, messageBoxIcon )} className="btn">Test</span>
+            <span onClick={() => sendMessageBoxCmd(String(selectedClient), messageBoxTitle, messageBoxContent, messageBoxButton, messageBoxIcon )} className="btn">Send</span>
+        </div>
+        </div>
+        
+        <form method="dialog" className="modal-backdrop">
+          <button>close</button>
+        </form>
+      </dialog>
+
       <dialog id="visit_website_modal" className="modal">
         <div className="modal-box">
           <h3 className="font-bold text-lg">Visit Website</h3>

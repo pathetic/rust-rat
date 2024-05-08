@@ -114,3 +114,22 @@ export const handleElevateCmd = async (
 ): Promise<void> => {
   return invoke("elevate_client", { id });
 };
+
+export const testMessageBoxCmd = async (
+  title: string,
+  message: string,
+  button: string,
+  icon: string
+): Promise<void> => {
+  return invoke("test_messagebox", { title, message, button, icon });
+}
+
+export const sendMessageBoxCmd = async (
+  id: string | undefined,
+  title: string,
+  message: string,
+  button: string,
+  icon: string
+): Promise<void> => {
+  return invoke("send_messagebox", { id, title, message, button, icon });
+}
