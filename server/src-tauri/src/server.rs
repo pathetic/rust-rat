@@ -14,16 +14,19 @@ use rsa::Pkcs1v15Encrypt;
 use common::commands::{ ClientInfo, Command, EncryptionRequestData, EncryptionResponseData };
 
 fn encryption_request(mut stream: TcpStream, pub_key: Vec<u8>) -> EncryptionResponseData {
-    write_buffer(&mut stream, Command::EncryptionRequest(EncryptionRequestData { public_key: pub_key.clone() }), &None);
+    write_buffer(
+        &mut stream,
+        Command::EncryptionRequest(EncryptionRequestData { public_key: pub_key.clone() }),
+        &None
+    );
 
+    println!("MOTHER FUCKER FUCKER HUSASA");
     let rcv = read_buffer(&mut stream.try_clone().unwrap(), &None).unwrap();
 
     match rcv {
         Command::EncryptionResponse(response) => response,
         _ => panic!("Invalid command received"),
-    
     }
-
 }
 
 fn get_client(mut stream: TcpStream, secret: Option<Vec<u8>>) -> ClientInfo {
@@ -83,7 +86,10 @@ impl Server {
                     let stream = i.unwrap();
                     let ip = stream.try_clone().unwrap().peer_addr().unwrap().ip().to_string();
 
-                    let encryption = encryption_request(stream.try_clone().unwrap(), public_key.to_public_key_der().unwrap().as_ref().to_vec());
+                    let encryption = encryption_request(
+                        stream.try_clone().unwrap(),
+                        public_key.to_public_key_der().unwrap().as_ref().to_vec()
+                    );
 
                     let padding = Pkcs1v15Encrypt::default();
                     let secret_dec = private_key.decrypt(padding, &encryption.secret).unwrap();

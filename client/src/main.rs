@@ -29,6 +29,7 @@ fn main() {
     let config = service::config::get_config();
 
     let is_connected = Arc::new(Mutex::new(false));
+    let is_connecting = Arc::new(Mutex::new(false));
 
     {
         let mut mutex_lock_guard = MUTEX_SERVICE.lock().unwrap();
@@ -52,10 +53,10 @@ fn main() {
         }
 
         std::thread::spawn(move || {
+            *is_connected_clone.lock().unwrap() = true;
             println!("Connecting to server...");
             let stream = TcpStream::connect(format!("{}:{}", config_clone.ip, config_clone.port));
             if let Ok(str) = stream {
-                *is_connected_clone.lock().unwrap() = true;
                 handle_server(
                     str.try_clone().unwrap(),
                     str.try_clone().unwrap(),
