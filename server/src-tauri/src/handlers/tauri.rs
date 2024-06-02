@@ -100,10 +100,10 @@ pub fn fetch_clients(
     let mut clients: Vec<FrontClient> = vec![];
 
     for (i, client) in (*server.clients.lock().unwrap()).iter_mut().enumerate() {
-        if !client.is_handled {
-            client.is_handled = true;
-            client.handle_client();
-        }
+        // if !client.is_handled {
+        //     client.is_handled = true;
+        //     client.handle_client();
+        // }
 
         if client.is_disconnect() {
             continue;
