@@ -38,7 +38,7 @@ impl TrayIcon {
             nid.szTip = [0; 128];
         }
 
-        TrayIcon { unattended: false, nid }
+        TrayIcon { unattended: true, nid }
     }
 
     pub fn set_unattended(&mut self, unattended: bool) {

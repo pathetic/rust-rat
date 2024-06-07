@@ -27,7 +27,6 @@ export const Home: React.FC = () => {
   }, [buildMutexEnabled]);
 
   const buildClient = async () => {
-    console.log("Building client  ");
     await buildClientCmd(
       buildIp,
       buildPort,

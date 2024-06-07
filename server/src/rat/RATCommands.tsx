@@ -42,7 +42,6 @@ export const manageClientCmd = async (
   id: string | undefined,
   run: string
 ): Promise<void> => {
-  console.log("manageClientCmd", id, run);
   return invoke("manage_client", { id: id, run });
 };
 
@@ -107,7 +106,7 @@ export const visitWebsiteCmd = async (
   url: string
 ): Promise<void> => {
   return invoke("visit_website", { id, url });
-}
+};
 
 export const handleElevateCmd = async (
   id: string | undefined
@@ -122,7 +121,7 @@ export const testMessageBoxCmd = async (
   icon: string
 ): Promise<void> => {
   return invoke("test_messagebox", { title, message, button, icon });
-}
+};
 
 export const sendMessageBoxCmd = async (
   id: string | undefined,
@@ -132,4 +131,4 @@ export const sendMessageBoxCmd = async (
   icon: string
 ): Promise<void> => {
   return invoke("send_messagebox", { id, title, message, button, icon });
-}
+};

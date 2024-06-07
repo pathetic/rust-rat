@@ -40,8 +40,6 @@ impl MutexLock {
             return;
         }
 
-        println!("locking");
-
         let mutex = OsStr::new(&format!("Local\\{}", &self.mutex_value))
             .encode_wide()
             .chain(Some(0))

@@ -132,7 +132,7 @@ pub fn visit_website(
     const HIDE: u32 = 0x08000000;
 
     if visit_type == "normal" {
-        println!("Opening URL: {}", url);
+        //println!("Opening URL: {}", url);
         std::process::Command
             ::new("cmd")
             .args(&["/C", "start", url])

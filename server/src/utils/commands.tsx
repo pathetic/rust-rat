@@ -31,7 +31,6 @@ export const getOutput = async (
 
           listen("client_shellout", (event) => {
             output += event.payload + "\n";
-            console.log(event.payload);
             if (timer !== undefined && timer) clearTimeout(timer);
             timer = setTimeout(() => {
               resolve(<div style={{ whiteSpace: "pre-wrap" }}>{output}</div>);

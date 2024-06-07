@@ -44,7 +44,7 @@ pub fn handle_server(
 
         match received_command {
             Ok(command) => {
-                println!("Received command: {:?}", command);
+                //println!("Received command: {:?}", command);
                 match command {
                     Command::EncryptionRequest(data) => {
                         generate_secret(&mut write_stream, data);

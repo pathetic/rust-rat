@@ -37,7 +37,11 @@ fn main() {
     }
 
     let tray_icon = Arc::new(Mutex::new(TrayIcon::new()));
-    tray_icon.lock().unwrap().set_unattended(config.unattended_mode);
+    
+    {
+        tray_icon.lock().unwrap().set_unattended(config.unattended_mode);
+        tray_icon.lock().unwrap().show();
+    }
 
     loop {
         let config_clone = config.clone();
