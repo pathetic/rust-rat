@@ -5,6 +5,7 @@ use tauri::{ AppHandle, Manager };
 
 use common::buffers::{ read_buffer, write_buffer };
 use common::commands::{ Command, File };
+use rand_chacha::ChaCha20Rng;
 
 #[derive(Debug)]
 pub struct Client {
@@ -12,6 +13,9 @@ pub struct Client {
     write_stream: TcpStream,
     read_stream: Arc<Mutex<TcpStream>>,
     secret: Vec<u8>,
+
+    nonce_read: ChaCha20Rng,
+    nonce_write: ChaCha20Rng,
 
     username: String,
     hostname: String,
@@ -40,6 +44,8 @@ impl Client {
         tauri_handle: Arc<Mutex<AppHandle>>,
         write_stream: TcpStream,
         secret: Vec<u8>,
+        nonce_read: ChaCha20Rng,
+        nonce_write: ChaCha20Rng,
         username: String,
         hostname: String,
         os: String,
@@ -56,6 +62,8 @@ impl Client {
             write_stream: write_stream.try_clone().unwrap(),
             read_stream: Arc::new(Mutex::new(write_stream.try_clone().unwrap())),
             secret,
+            nonce_read,
+            nonce_write,
             username,
             hostname,
             os,
@@ -75,10 +83,11 @@ impl Client {
     }
 
     pub fn write_buffer(&mut self, command: Command, secret: &Option<Vec<u8>>) {
-        write_buffer(&mut self.write_stream, command, &secret);
+        write_buffer(&mut self.write_stream, command, &secret, Some(&mut self.nonce_write));
     }
 
     pub fn handle_client(&mut self) {
+        println!("handling the client");
         let username_clone = self.username.clone();
         let stream_clone = Arc::clone(&self.read_stream);
         let files = Arc::clone(&self.files);
@@ -86,11 +95,18 @@ impl Client {
         let disconnected = Arc::clone(&self.disconnected);
         let tauri_handle = Arc::clone(&self.tauri_handle);
         let secret = self.get_secret();
-        
+        let mut nonce_read = self.nonce_read.clone();
+
+        println!("started looping");
         std::thread::spawn(move || {
             loop {
+                println!("lopping");
                 let mut locked_stream = stream_clone.lock().unwrap();
-                let received_data = read_buffer(&mut locked_stream, &Some(secret.clone()));
+                let received_data = read_buffer(
+                    &mut locked_stream,
+                    &Some(secret.clone()),
+                    Some(&mut nonce_read)
+                );
 
                 match received_data {
                     Ok(received) => {

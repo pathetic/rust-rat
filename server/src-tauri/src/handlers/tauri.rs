@@ -19,7 +19,7 @@ pub fn start_server(
     tauri_state: State<'_, SharedTauriState>
 ) -> String {
     let mut server = server_state.0.lock().unwrap();
-    let running = server.listen_port(port.to_string());
+    let running = server.listen_port2(port.to_string());
 
     let mut tauri_state = tauri_state.0.lock().unwrap();
 
@@ -100,10 +100,10 @@ pub fn fetch_clients(
     let mut clients: Vec<FrontClient> = vec![];
 
     for (i, client) in (*server.clients.lock().unwrap()).iter_mut().enumerate() {
-        if !client.is_handled {
-            client.is_handled = true;
-            client.handle_client();
-        }
+        // if !client.is_handled {
+        //     client.is_handled = true;
+        //     client.handle_client();
+        // }
 
         if client.is_disconnect() {
             continue;

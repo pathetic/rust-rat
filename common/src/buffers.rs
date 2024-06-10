@@ -3,13 +3,17 @@ use std::net::TcpStream;
 use serde::{ Serialize, Deserialize };
 use rmp_serde::Serializer;
 use std::result::Result;
+use rand_chacha::ChaCha20Rng;
+use rand_chacha::rand_core::RngCore;
+
 use crate::commands::Command;
 
 use chacha20poly1305::{ aead::{ Aead, NewAead }, XChaCha20Poly1305 };
 
 pub fn read_buffer(
     stream: &mut TcpStream,
-    secret: &Option<Vec<u8>>
+    secret: &Option<Vec<u8>>,
+    nonce_generator: Option<&mut ChaCha20Rng>
 ) -> Result<Command, Box<dyn std::error::Error>> {
     let mut size_buf = [0_u8; 4];
     stream.read_exact(&mut size_buf)?;
@@ -24,26 +28,53 @@ pub fn read_buffer(
             let slice = secret.as_slice();
             let secret_u832: Result<&[u8; 32], _> = slice.try_into();
 
-            data_buf = decrypt_buffer(&data_buf, secret_u832.unwrap(), &[0; 24]);
+            let mut nonce = [0u8; crate::NONCE_LEN];
+            nonce_generator
+                .expect("Expected `nonce_generator` to be `Some` because `secret` was `Some`.")
+                .fill_bytes(&mut nonce);
+
+            // println!("READ secret: {:?}", secret_u832);
+            //println!("READ nonce: {:?}", nonce);
+            data_buf = decrypt_buffer(&data_buf, &secret_u832.unwrap(), &nonce);
         }
         None => {}
     }
 
     let packet: Packet = rmp_serde::from_slice(&data_buf)?;
 
+    println!("PACKET received {:?}", packet);
+
     Ok(packet.command)
 }
 
-pub fn write_buffer(stream: &mut TcpStream, command: Command, secret: &Option<Vec<u8>>) {
+pub fn write_buffer(
+    stream: &mut TcpStream,
+    command: Command,
+    secret: &Option<Vec<u8>>,
+    nonce_generator: Option<&mut ChaCha20Rng>
+) {
     let mut buffer: Vec<u8> = Vec::new();
 
     let packet = Packet { command, test_data: "test".to_string() };
+
+    println!("PACKET SENT  {:?}", packet);
 
     packet.serialize(&mut Serializer::new(&mut buffer)).unwrap();
 
     match secret {
         Some(secret) => {
-            buffer = encrypt_buffer(&buffer, vec_to_array32(secret).unwrap(), &[0; 24]);
+            let slice = secret.as_slice();
+            let secret_u832: Result<&[u8; 32], _> = slice.try_into();
+
+            let mut nonce = [0u8; crate::NONCE_LEN];
+            nonce_generator
+                .expect("Expected `nonce_generator` to be `Some` because `secret` was `Some`.")
+                .fill_bytes(&mut nonce);
+
+            // println!("WRITE secret: {:?}", secret_u832);
+            //println!("WRITE nonce: {:?}", nonce);
+
+            buffer = encrypt_buffer(&buffer, vec_to_array32(secret).unwrap(), &nonce);
         }
         None => {}
     }
@@ -68,9 +99,14 @@ pub fn encrypt_buffer(
     nonce: &[u8; crate::NONCE_LEN]
 ) -> Vec<u8> {
     let cipher = XChaCha20Poly1305::new(secret.into());
-    let buf = cipher.encrypt(nonce.into(), buffer.as_ref()).unwrap();
+    let buf = cipher.encrypt(nonce.into(), buffer.as_ref());
 
-    buf
+    println!("ENCRYPTING THE BUFFER WITH NONCE {:?}", nonce);
+
+    match buf {
+        Ok(buf) => buf,
+        Err(_) => panic!("Failed to encrypt buffer"),
+    }
 }
 
 pub fn decrypt_buffer(
@@ -79,9 +115,14 @@ pub fn decrypt_buffer(
     nonce: &[u8; crate::NONCE_LEN]
 ) -> Vec<u8> {
     let cipher = XChaCha20Poly1305::new(secret.into());
-    let buf = cipher.decrypt(nonce.into(), buffer.as_ref()).unwrap();
+    let buf = cipher.decrypt(nonce.into(), buffer.as_ref());
 
-    buf
+    println!("DECRYPTING THE BUFFER WITH NONCE {:?}", nonce);
+
+    match buf {
+        Ok(buf) => buf,
+        Err(_) => panic!("Failed to decrypt buffer"),
+    }
 }
 
 pub fn read_console_buffer<I>(stream: &mut I) -> core::result::Result<Vec<u8>, ()> where I: Read {

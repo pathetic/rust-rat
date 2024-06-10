@@ -11,7 +11,10 @@ use rand_chacha::ChaCha20Rng;
 
 use rsa::RsaPublicKey;
 
-pub fn generate_secret(write_stream: &mut TcpStream, data: EncryptionRequestData) {
+pub fn generate_secret(
+    write_stream: &mut TcpStream,
+    data: EncryptionRequestData
+) -> [u8; common::SECRET_LEN] {
     let padding = Pkcs1v15Encrypt::default();
     let public_key = RsaPublicKey::from_public_key_der(&data.public_key).unwrap();
 
@@ -24,5 +27,12 @@ pub fn generate_secret(write_stream: &mut TcpStream, data: EncryptionRequestData
     };
 
     *crate::SECRET_INITIALIZED.lock().unwrap() = true;
-    write_buffer(write_stream, Command::EncryptionResponse(encryption_response), &None);
+    write_buffer(
+        write_stream,
+        Command::EncryptionResponse(encryption_response),
+        &None,
+        crate::NONCE_WRITE.lock().unwrap().as_mut()
+    );
+
+    *secret
 }

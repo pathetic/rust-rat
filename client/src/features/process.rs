@@ -23,7 +23,12 @@ pub fn process_list(write_stream: &mut TcpStream, secret: &Option<Vec<u8>>) {
 
     let process_command = Command::ProcessList(process_list);
 
-    write_buffer(write_stream, process_command, secret);
+    write_buffer(
+        write_stream,
+        process_command,
+        secret,
+        crate::NONCE_WRITE.lock().unwrap().as_mut()
+    );
 }
 
 pub fn kill_process(pid: usize) {

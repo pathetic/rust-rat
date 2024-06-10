@@ -42,9 +42,6 @@ export const Clients: React.FC = () => {
     setUrl("");
   }
 
-  const handleMessageBox = () => {
-  }
-
   const handleClose = () => {
     setContextMenu(null);
   };

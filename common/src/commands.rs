@@ -1,5 +1,6 @@
 use serde::{ Serialize, Deserialize };
 use winapi::um::winuser;
+use rand_chacha::ChaCha20Rng;
 
 #[derive(Serialize, Deserialize, Debug)]
 pub enum Command {
@@ -56,6 +57,12 @@ pub struct ClientInfo {
     pub storage: Vec<String>,
     pub displays: i32,
     pub is_elevated: bool,
+}
+
+#[derive(Debug)]
+pub struct ClientNonce {
+    pub nonce_read: Option<ChaCha20Rng>,
+    pub nonce_write: Option<ChaCha20Rng>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]

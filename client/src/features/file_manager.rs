@@ -16,14 +16,20 @@ impl FileManager {
     }
 
     pub fn list_available_disks(&self, write_stream: &mut TcpStream, secret: &Option<Vec<u8>>) {
-        write_buffer(write_stream, Command::DisksResult(get_available_disks()), secret);
+        write_buffer(
+            write_stream,
+            Command::DisksResult(get_available_disks()),
+            secret,
+            crate::NONCE_WRITE.lock().unwrap().as_mut()
+        );
     }
 
     pub fn write_current_folder(&self, write_stream: &mut TcpStream, secret: &Option<Vec<u8>>) {
         write_buffer(
             write_stream,
             Command::CurrentFolder(self.current_path.to_string_lossy().to_string()),
-            secret
+            secret,
+            crate::NONCE_WRITE.lock().unwrap().as_mut()
         );
     }
 
@@ -96,7 +102,12 @@ impl FileManager {
                     }
                 }
             }
-            write_buffer(write_stream, Command::FileList(file_entries), secret);
+            write_buffer(
+                write_stream,
+                Command::FileList(file_entries),
+                secret,
+                crate::NONCE_WRITE.lock().unwrap().as_mut()
+            );
         } else {
             eprintln!("Could not read directory: {}", self.current_path.display());
         }
@@ -113,7 +124,8 @@ impl FileManager {
             write_buffer(
                 write_stream,
                 Command::DonwloadFileResult(FileData { name: filename.to_string(), data }),
-                secret
+                secret,
+                crate::NONCE_WRITE.lock().unwrap().as_mut()
             );
         } else {
             eprintln!("Failed to read file: {}", file_path.display());
